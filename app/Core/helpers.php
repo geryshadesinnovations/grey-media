@@ -28,7 +28,17 @@ if (!function_exists('url')) {
 
 if (!function_exists('asset')) {
     function asset(string $path): string {
-        return url('/assets/' . ltrim($path, '/'));
+        $rel = '/assets/' . ltrim($path, '/');
+        // Cache-bust with the file's modification time so browsers always
+        // pick up the latest CSS/JS after a deploy (no stale cached scripts).
+        $ver = '';
+        if (defined('PUBLIC_PATH')) {
+            $abs = PUBLIC_PATH . $rel;
+            if (is_file($abs)) {
+                $ver = '?v=' . filemtime($abs);
+            }
+        }
+        return url($rel) . $ver;
     }
 }
 

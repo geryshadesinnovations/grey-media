@@ -457,35 +457,51 @@ html[data-theme="light"] select option {
 .ppt-stage img { max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); }
 
 /* In-browser PPTX viewer (client-side render when no server PDF exists) */
-.ppt-viewer-wrap { width: 100%; min-height: 480px; max-height: 82vh; overflow: auto; background: var(--surface-strong); padding: 1rem; }
-.pptx-host { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-.pptx-host .slide { box-shadow: var(--shadow-md); border-radius: 4px; margin: 0 auto; max-width: 100%; }
+.ppt-viewer-wrap { width: 100%; max-height: 82vh; overflow: auto; background: var(--surface-strong); padding: 1rem 1rem 2.5rem; }
+/* PPTXjs sets an explicit height/position on the host and its slides which can
+   clip the final slide. Force the host to grow with its content and let the
+   slides flow normally so every slide renders in full. */
+.pptx-host { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+.pptx-host .slide {
+    position: relative !important;
+    top: auto !important; left: auto !important;
+    float: none !important;
+    display: block;
+    margin: 0 auto 1rem !important;
+    box-shadow: var(--shadow-md); border-radius: 4px;
+}
+.pptx-host .divs2slidesjs,
+.pptx-host > div:not(.slide) { height: auto !important; overflow: visible !important; }
 .ppt-status { display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 2rem; color: var(--text-muted); text-align: center; }
 .ppt-status.ppt-status-error { color: var(--text); }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: gs-spin .8s linear infinite; }
 @keyframes gs-spin { to { transform: rotate(360deg); } }
 
-/* Video quality selector (HLS adaptive renditions) */
-.gs-quality { position: absolute; top: 12px; right: 12px; z-index: 5; font-size: 13px; }
-.gs-quality-btn {
-  display: inline-flex; align-items: center; gap: .4rem;
-  padding: .4rem .65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,.18);
-  background: rgba(17,24,39,.72); color: #fff; cursor: pointer; backdrop-filter: blur(6px);
+/* Video settings (gear) menu - holds Quality + Playback speed submenus */
+.gs-settings { position: absolute; top: 12px; right: 12px; z-index: 6; font-size: 13px; }
+.gs-settings-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(17,24,39,.72);
+  color: #fff; cursor: pointer; backdrop-filter: blur(6px); transition: background .15s, transform .15s;
 }
-.gs-quality-btn:hover { background: rgba(17,24,39,.9); }
-.gs-quality-label { font-weight: 600; letter-spacing: .02em; }
-.gs-quality-menu {
-  position: absolute; top: calc(100% + 6px); right: 0; min-width: 132px;
-  background: rgba(17,24,39,.96); border: 1px solid rgba(255,255,255,.14);
-  border-radius: 10px; padding: .3rem; display: flex; flex-direction: column;
-  box-shadow: var(--shadow-md);
+.gs-settings-btn:hover { background: rgba(17,24,39,.92); }
+.gs-settings-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; min-width: 224px; max-height: 280px; overflow-y: auto;
+  background: rgba(17,24,39,.97); border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px; padding: .35rem; box-shadow: var(--shadow-md); color: #e5e7eb;
 }
-.gs-quality-item {
-  text-align: left; padding: .45rem .6rem; border-radius: 7px; border: 0;
-  background: transparent; color: #e5e7eb; cursor: pointer; font-size: 13px;
+.gs-set-row, .gs-set-choice, .gs-set-back {
+  width: 100%; display: flex; align-items: center; gap: .5rem;
+  padding: .55rem .7rem; border: 0; background: transparent; color: #e5e7eb;
+  cursor: pointer; font-size: 13px; border-radius: 8px; text-align: left;
 }
-.gs-quality-item:hover { background: rgba(255,255,255,.1); }
-.gs-quality-item.active { background: var(--accent); color: #fff; font-weight: 700; }
+.gs-set-row { justify-content: space-between; }
+.gs-set-row:hover, .gs-set-choice:hover, .gs-set-back:hover { background: rgba(255,255,255,.1); }
+.gs-set-val { color: #9ca3af; display: inline-flex; align-items: center; gap: .15rem; }
+.gs-set-back { font-weight: 700; border-bottom: 1px solid rgba(255,255,255,.12); border-radius: 0; margin-bottom: .2rem; }
+.gs-set-choice.active { color: #fff; font-weight: 700; }
+.gs-set-choice.active::after { content: '✓'; margin-left: auto; color: #a78bfa; }
 
 .media-info { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; }
 .media-info h1 { margin: 0; font-size: 1.4rem; line-height: 1.3; }
@@ -1247,6 +1263,9 @@ input[type="radio"]:not(.no-style) {
     color: white;
     font-size: 11px; font-weight: 700;
 }
+/* Honour the hidden attribute (the rule above would otherwise force the
+   badge to show "0" on empty cards, since author display wins over [hidden]). */
+.cat-card-count[hidden] { display: none !important; }
 
 .cat-card-body {
     display: none;

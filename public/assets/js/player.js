@@ -1,10 +1,13 @@
 /* Greyshades - secure HTML5 video player with HLS.js fallback to MP4.
  *
- * When the video is served as an adaptive HLS bundle (multiple renditions:
- * 240p / 480p / 720p / 1080p) we render a custom quality selector so users can
- * pin a specific resolution or leave it on Auto (adaptive bitrate). Quality
- * switching is only possible through HLS.js; native HLS (Safari) and the plain
- * MP4 fallback manage quality themselves, so the selector is hidden there.
+ * A single, YouTube-style settings (gear) menu sits in the top-right of the
+ * player. It contains two rows - "Quality" and "Playback speed" - each of
+ * which opens a submenu of choices. This keeps the main control bar clean.
+ *
+ * Quality switching is only possible through HLS.js (adaptive renditions:
+ * 240p / 480p / 720p / 1080p). Native HLS (Safari) and the plain MP4 fallback
+ * manage quality themselves, so the gear menu is only built for the HLS.js
+ * path. Playback speed is always offered there too.
  */
 (() => {
     'use strict';
@@ -20,90 +23,124 @@
     };
 
     const gearSvg =
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-        '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">' +
+        '<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+    const chevron = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>';
+    const backChevron = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>';
+
+    const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+    const speedLabel = (r) => (r === 1 ? 'Normal' : r + 'x');
+    const esc = (s) => String(s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     /**
-     * Build the quality menu for an HLS.js instance once the manifest is known.
-     * Levels are listed high -> low, with an Auto (adaptive) option on top.
+     * Build the gear settings menu. `hls` may be an HLS.js instance (enables
+     * the Quality row) or null (speed-only).
      */
-    const buildQualityMenu = (hls) => {
-        const levels = hls.levels || [];
-        if (levels.length < 2 || !stage) return; // nothing to switch between
+    const buildSettingsMenu = (hls) => {
+        if (!stage) return;
+        const levels = hls ? (hls.levels || []) : [];
+        const hasQuality = levels.length >= 2;
 
         const wrap = document.createElement('div');
-        wrap.className = 'gs-quality';
+        wrap.className = 'gs-settings';
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'gs-quality-btn';
-        btn.setAttribute('aria-label', 'Video quality');
-        btn.innerHTML = gearSvg + '<span class="gs-quality-label">Auto</span>';
+        btn.className = 'gs-settings-btn';
+        btn.setAttribute('aria-label', 'Settings');
+        btn.innerHTML = gearSvg;
 
-        const menu = document.createElement('div');
-        menu.className = 'gs-quality-menu';
-        menu.hidden = true;
+        const panel = document.createElement('div');
+        panel.className = 'gs-settings-panel';
+        panel.hidden = true;
 
         wrap.appendChild(btn);
-        wrap.appendChild(menu);
+        wrap.appendChild(panel);
         stage.appendChild(wrap);
 
-        // Options: Auto + each rendition, sorted by height descending.
-        const options = [{ label: 'Auto', value: -1 }];
-        levels
-            .map((l, i) => ({ height: l.height, bitrate: l.bitrate, index: i }))
-            .sort((a, b) => (b.height || 0) - (a.height || 0))
-            .forEach(({ height, index }) => {
-                options.push({ label: height ? height + 'p' : ('Level ' + (index + 1)), value: index });
-            });
+        const qualityOptions = () => {
+            const opts = [{ label: 'Auto', value: -1 }];
+            levels
+                .map((l, i) => ({ height: l.height, index: i }))
+                .sort((a, b) => (b.height || 0) - (a.height || 0))
+                .forEach(({ height, index }) => {
+                    opts.push({ label: height ? height + 'p' : ('Level ' + (index + 1)), value: index });
+                });
+            return opts;
+        };
 
-        const currentLabel = () => {
+        const currentQualityLabel = () => {
+            if (!hls) return '';
             const lvl = hls.levels[hls.currentLevel];
             if (hls.autoLevelEnabled || hls.currentLevel === -1) {
-                return 'Auto' + (lvl && lvl.height ? ' · ' + lvl.height + 'p' : '');
+                return 'Auto' + (lvl && lvl.height ? ' (' + lvl.height + 'p)' : '');
             }
             return lvl && lvl.height ? lvl.height + 'p' : 'Auto';
         };
+        const currentSpeedLabel = () => speedLabel(video.playbackRate || 1);
 
+        const isQualityActive = (val) => val === -1
+            ? hls.autoLevelEnabled
+            : (!hls.autoLevelEnabled && hls.currentLevel === val);
+
+        const row = (key, label, value) =>
+            '<button type="button" class="gs-set-row" data-row="' + key + '">' +
+                '<span>' + label + '</span>' +
+                '<span class="gs-set-val">' + esc(value) + chevron + '</span>' +
+            '</button>';
+        const back = (title) =>
+            '<button type="button" class="gs-set-back" data-back="1">' + backChevron + '<span>' + title + '</span></button>';
+        const choice = (kind, value, label, active) =>
+            '<button type="button" class="gs-set-choice' + (active ? ' active' : '') + '" data-kind="' + kind + '" data-value="' + value + '">' +
+                esc(label) + '</button>';
+
+        let view = 'main';
         const render = () => {
-            menu.innerHTML = '';
-            options.forEach((opt) => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'gs-quality-item';
-                const active = opt.value === -1
-                    ? hls.autoLevelEnabled
-                    : (!hls.autoLevelEnabled && hls.currentLevel === opt.value);
-                if (active) item.classList.add('active');
-                item.textContent = opt.label;
-                item.addEventListener('click', () => {
-                    hls.currentLevel = opt.value; // -1 => Auto (adaptive)
-                    menu.hidden = true;
-                    updateLabel();
-                    render();
-                });
-                menu.appendChild(item);
-            });
+            if (view === 'quality') {
+                panel.innerHTML = back('Quality') +
+                    qualityOptions().map(o => choice('q', o.value, o.label, isQualityActive(o.value))).join('');
+            } else if (view === 'speed') {
+                panel.innerHTML = back('Playback speed') +
+                    SPEEDS.map(s => choice('s', s, speedLabel(s), Math.abs((video.playbackRate || 1) - s) < 0.001)).join('');
+            } else {
+                panel.innerHTML =
+                    (hasQuality ? row('quality', 'Quality', currentQualityLabel()) : '') +
+                    row('speed', 'Playback speed', currentSpeedLabel());
+            }
         };
 
-        const updateLabel = () => {
-            const label = wrap.querySelector('.gs-quality-label');
-            if (label) label.textContent = currentLabel();
-        };
+        panel.addEventListener('click', (e) => {
+            const rowEl = e.target.closest('[data-row]');
+            if (rowEl) { view = rowEl.dataset.row; render(); return; }
+            if (e.target.closest('[data-back]')) { view = 'main'; render(); return; }
+            const choiceEl = e.target.closest('[data-kind]');
+            if (choiceEl) {
+                if (choiceEl.dataset.kind === 'q' && hls) {
+                    hls.currentLevel = parseInt(choiceEl.dataset.value, 10); // -1 => Auto
+                } else if (choiceEl.dataset.kind === 's') {
+                    video.playbackRate = parseFloat(choiceEl.dataset.value);
+                }
+                view = 'main';
+                render();
+            }
+        });
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            menu.hidden = !menu.hidden;
-            if (!menu.hidden) render();
+            panel.hidden = !panel.hidden;
+            if (!panel.hidden) { view = 'main'; render(); }
         });
         document.addEventListener('click', (e) => {
-            if (!wrap.contains(e.target)) menu.hidden = true;
+            if (!wrap.contains(e.target)) panel.hidden = true;
         });
-        // Keep the label in sync as adaptive mode changes renditions.
-        hls.on(window.Hls.Events.LEVEL_SWITCHED, updateLabel);
+        if (hls) {
+            hls.on(window.Hls.Events.LEVEL_SWITCHED, () => {
+                if (!panel.hidden && view === 'main') render();
+            });
+        }
 
         render();
-        updateLabel();
     };
 
     if (hlsSrc) {
@@ -111,13 +148,13 @@
             const hls = new window.Hls({ enableWorker: true, lowLatencyMode: false, capLevelToPlayerSize: true });
             hls.loadSource(hlsSrc);
             hls.attachMedia(video);
-            hls.on(window.Hls.Events.MANIFEST_PARSED, () => buildQualityMenu(hls));
+            hls.on(window.Hls.Events.MANIFEST_PARSED, () => buildSettingsMenu(hls));
             hls.on(window.Hls.Events.ERROR, (_, data) => {
                 if (data.fatal) {
                     console.warn('[player] HLS fatal, falling back to MP4', data);
                     hls.destroy();
-                    const q = stage && stage.querySelector('.gs-quality');
-                    if (q) q.remove();
+                    const s = stage && stage.querySelector('.gs-settings');
+                    if (s) s.remove();
                     startNative();
                 }
             });
