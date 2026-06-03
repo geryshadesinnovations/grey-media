@@ -252,8 +252,6 @@ html[data-theme="light"] .topbar { background: rgba(255,255,255,.65); }
 
 @media (max-width: 960px) {
   .dashboard { grid-template-columns: 1fr; }
-  .sidebar { display: none; position: fixed; inset: 60px 0 0 0; z-index: 40; padding: 1rem; overflow-y: auto; background: var(--bg-1); }
-  .sidebar.open { display: block; }
   .sidebar-toggle {
     display: inline-flex; align-items: center; gap: .5rem;
     margin-bottom: 1rem; padding: .55rem .9rem; border-radius: 10px;
@@ -581,7 +579,7 @@ html[data-theme="light"] select option {
 
 /* ---------- Admin ---------- */
 .admin-shell { display: grid; grid-template-columns: 220px 1fr; gap: 1.25rem; }
-@media (max-width: 900px) { .admin-shell { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .admin-shell { grid-template-columns: 1fr; } }
 .admin-nav {
   align-self: flex-start; position: sticky; top: 75px;
   padding: 1rem; border-radius: var(--radius-lg);
@@ -595,6 +593,52 @@ html[data-theme="light"] select option {
 }
 .admin-nav a.active, .admin-nav a:hover { background: var(--accent-soft); color: var(--accent); }
 .admin-content h1 { margin: .25rem 0 1rem; }
+
+/* ---------- Mobile navigation drawers (admin nav + category sidebar) ---------- */
+/* Desktop / tablet: drawer chrome is hidden; sidebars render normally. */
+.drawer-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(2,6,23,.55); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s ease; }
+.drawer-overlay.show { opacity: 1; visibility: visible; }
+.drawer-head { display: none; }
+.drawer-close { display: none; }
+.nav-toggle, .admin-nav-toggle { display: none; }
+
+@media (max-width: 960px) {
+  body.drawer-open { overflow: hidden; }
+
+  /* The admin hamburger button (only rendered on mobile). */
+  .admin-nav-toggle, .nav-toggle {
+    display: inline-flex; align-items: center; gap: .5rem; justify-self: start;
+    margin-bottom: 1rem; padding: .55rem .9rem; border-radius: 10px; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer;
+  }
+
+  /* Off-canvas drawer panel shared by .sidebar and .admin-nav. */
+  .drawer {
+    position: fixed !important; top: 0; left: 0; bottom: 0;
+    width: min(86vw, 330px); max-height: none; margin: 0; border-radius: 0;
+    z-index: 1001; display: block !important;
+    background: var(--bg-1); border: 0; border-right: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    overflow-y: auto; padding: 1rem;
+    transform: translateX(-100%); transition: transform .28s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  .drawer.open { transform: translateX(0); }
+
+  /* Sticky close bar at the top of the drawer. */
+  .drawer .drawer-head {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: flex-end;
+    margin: -1rem -1rem .75rem; padding: .55rem .7rem;
+    background: var(--bg-1); border-bottom: 1px solid var(--border);
+  }
+  .drawer .drawer-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer;
+  }
+  .drawer .drawer-close:hover { background: var(--accent-soft); color: var(--accent); }
+}
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
 .stat-grid-small { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }

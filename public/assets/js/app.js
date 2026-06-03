@@ -58,12 +58,58 @@
         }
     });
 
-    // Mobile sidebar
-    const sidebar = document.querySelector('.sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    if (sidebar && sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
-    }
+    // Mobile navigation drawers (admin nav + category sidebar)
+    (() => {
+        const drawers = document.querySelectorAll('.drawer');
+        if (!drawers.length) return;
+
+        let overlay = document.querySelector('.drawer-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'drawer-overlay';
+            document.body.appendChild(overlay);
+        }
+
+        const closeAll = () => {
+            document.querySelectorAll('.drawer.open').forEach(d => d.classList.remove('open'));
+            overlay.classList.remove('show');
+            document.body.classList.remove('drawer-open');
+        };
+        const open = (drawer) => {
+            if (!drawer) return;
+            closeAll();
+            drawer.classList.add('open');
+            overlay.classList.add('show');
+            document.body.classList.add('drawer-open');
+        };
+
+        document.querySelectorAll('[data-drawer-open]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                open(document.getElementById(btn.getAttribute('data-drawer-open')));
+            });
+        });
+        document.querySelectorAll('[data-drawer-close]').forEach(btn => {
+            btn.addEventListener('click', closeAll);
+        });
+
+        // Tap/click on the backdrop closes the menu.
+        overlay.addEventListener('click', closeAll);
+        // Escape closes the menu.
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+        // Selecting a navigation link inside a drawer closes it (the toggle
+        // buttons that only expand the category tree are <button>s, so they
+        // are intentionally excluded).
+        drawers.forEach(drawer => {
+            drawer.addEventListener('click', (e) => {
+                if (e.target.closest('a[href]')) closeAll();
+            });
+        });
+        // Reset state if the viewport grows back to desktop.
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 960) closeAll();
+        });
+    })();
 
     // Auto-dismiss toasts
     document.querySelectorAll('.toast').forEach(t => setTimeout(() => t.remove(), 4000));

@@ -68,7 +68,12 @@ $renderNode = function (array $node, int $depth = 0) use (&$renderNode, $selecte
     <?php
 };
 ?>
-<aside class="sidebar">
+<aside class="sidebar drawer" id="category-drawer">
+    <div class="drawer-head">
+        <button class="drawer-close" type="button" data-drawer-close aria-label="Close menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+    </div>
     <div class="sidebar-section">
         <a class="sidebar-home <?= empty($filters['section_code']) && empty($filters['category_id']) ? 'active' : '' ?>" href="<?= url('/dashboard') ?>">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>

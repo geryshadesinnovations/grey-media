@@ -40,7 +40,7 @@ $buildUrl = function (array $changes = []) use ($filters, $sort): string {
 };
 ?>
 <div class="dashboard">
-    <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Toggle sidebar">
+    <button class="sidebar-toggle" id="sidebar-toggle" type="button" data-drawer-open="category-drawer" aria-label="Toggle sidebar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         Categories
     </button>

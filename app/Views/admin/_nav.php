@@ -8,7 +8,16 @@ $items = [
     '/admin/activity'   => ['Activity',  'M3 12h4l3-9 4 18 3-9h4'],
 ];
 ?>
-<aside class="admin-nav">
+<button class="nav-toggle admin-nav-toggle" type="button" data-drawer-open="admin-drawer" aria-label="Open admin menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    Admin menu
+</button>
+<aside class="admin-nav drawer" id="admin-drawer">
+    <div class="drawer-head">
+        <button class="drawer-close" type="button" data-drawer-close aria-label="Close menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+    </div>
     <h4>Admin</h4>
     <ul>
         <?php foreach ($items as $href => [$label, $path]): $a = $current === $href ? 'active' : ''; ?>
