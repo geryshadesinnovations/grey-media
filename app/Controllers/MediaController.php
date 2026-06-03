@@ -21,7 +21,8 @@ final class MediaController
         if (!$m) { http_response_code(404); echo view('errors/404', []); return; }
 
         $section = Section::find((int) $m['section_id']);
-        if (!$section || !Auth::canSection($section['code'])) {
+        $mediaSectionCodes = Media::sectionCodesFor((int) $m['id'], (int) $m['section_id']);
+        if (!$section || !Auth::canAccessSections($mediaSectionCodes)) {
             http_response_code(403); echo view('errors/403', []); return;
         }
 

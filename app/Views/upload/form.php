@@ -103,6 +103,10 @@ foreach ($sections as $s) {
 ?>
 <div class="upload-page">
     <div class="upload-header">
+        <a class="back-link" href="<?= url('/dashboard') ?>">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </a>
         <h1>Upload media</h1>
         <p class="muted">Drop a file, pick the categories it belongs to, and we'll do the rest. The same file is stored once and shows up in every category you select.</p>
     </div>

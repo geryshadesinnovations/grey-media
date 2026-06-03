@@ -41,29 +41,28 @@ $previewUrl = url('/preview/' . $media['uuid']);
 
         <?php elseif ($type === 'pdf'): ?>
             <div class="pdf-stage">
-                <object data="<?= e($streamUrl) ?>#toolbar=1&navpanes=0" type="application/pdf">
-                    <embed src="<?= e($streamUrl) ?>#toolbar=1&navpanes=0" type="application/pdf">
-                    <p style="padding:2rem;text-align:center;">
-                        Your browser cannot display this PDF inline.
-                        <a href="<?= e($streamUrl) ?>" target="_blank" rel="noopener">Open in a new tab</a>.
-                    </p>
-                </object>
+                <iframe class="doc-frame"
+                        src="<?= e($streamUrl) ?>#toolbar=1&navpanes=0&view=FitH"
+                        title="<?= e($media['title']) ?>"
+                        loading="lazy"></iframe>
             </div>
 
         <?php elseif ($type === 'ppt'): ?>
+            <?php if (!empty($media['preview_path'])): ?>
             <div class="pdf-stage">
-                <?php if (!empty($media['preview_path'])): ?>
-                <object data="<?= e($previewUrl) ?>#toolbar=1&navpanes=0" type="application/pdf">
-                    <embed src="<?= e($previewUrl) ?>#toolbar=1&navpanes=0" type="application/pdf">
-                    <p style="padding:2rem;text-align:center;">
-                        Your browser cannot display this presentation inline.
-                        <a href="<?= e($previewUrl) ?>" target="_blank" rel="noopener">Open in a new tab</a>.
-                    </p>
-                </object>
-                <?php else: ?>
-                <p class="muted" style="padding:2rem;text-align:center;">Preview not available for this presentation.</p>
-                <?php endif; ?>
+                <iframe class="doc-frame"
+                        src="<?= e($previewUrl) ?>#toolbar=1&navpanes=0&view=FitH"
+                        title="<?= e($media['title']) ?>"
+                        loading="lazy"></iframe>
             </div>
+            <?php else: ?>
+            <div class="doc-fallback">
+                <?php if (!empty($media['thumbnail_path'])): ?>
+                    <img src="<?= url('/thumb/' . $media['uuid']) ?>" alt="<?= e($media['title']) ?>">
+                <?php endif; ?>
+                <p class="muted">A slide-by-slide preview for this presentation isn't available yet. You can download the original file if you have permission.</p>
+            </div>
+            <?php endif; ?>
 
         <?php else: ?>
             <p class="muted">This media type cannot be previewed inline.</p>

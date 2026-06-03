@@ -439,11 +439,20 @@ html[data-theme="light"] select option {
 .back-link:hover { color: var(--accent); }
 .media-stage { padding: 0; overflow: hidden; min-height: 360px; display: grid; place-items: center; background: #000; }
 .media-stage[data-type="image"] { background: var(--surface-strong); }
+/* Documents (PDF / converted PPT) should fill the whole stage, not sit
+   centered at their intrinsic (small) size. */
+.media-stage[data-type="pdf"],
+.media-stage[data-type="ppt"] { display: block; background: var(--surface-strong); }
 .gs-player { width: 100%; height: auto; max-height: 75vh; display: block; background: #000; }
 .image-stage { width: 100%; display: grid; place-items: center; padding: 1rem; }
 .image-stage img { max-width: 100%; max-height: 75vh; border-radius: 8px; }
-.pdf-stage { width: 100%; height: 75vh; }
-.pdf-stage iframe { width: 100%; height: 100%; border: 0; }
+.pdf-stage { width: 100%; height: 82vh; min-height: 480px; }
+.pdf-stage .doc-frame,
+.pdf-stage iframe,
+.pdf-stage object,
+.pdf-stage embed { width: 100%; height: 100%; border: 0; display: block; }
+.doc-fallback { width: 100%; min-height: 360px; padding: 2rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; justify-content: center; text-align: center; }
+.doc-fallback img { max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); }
 .ppt-stage { padding: 1.5rem; text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
 .ppt-stage img { max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); }
 

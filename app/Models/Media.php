@@ -29,6 +29,28 @@ final class Media
         return Database::first("SELECT * FROM media WHERE file_hash = ?", [$hash]);
     }
 
+    /**
+     * Every section code a media item belongs to: its primary section plus
+     * any section reached through an attached category. Used to authorise
+     * viewing/streaming for files that span more than one section (e.g. a
+     * file filed under both Graphics and Events).
+     *
+     * @return array<int,string>
+     */
+    public static function sectionCodesFor(int $mediaId, int $primarySectionId): array
+    {
+        $rows = Database::all(
+            "SELECT s.code FROM sections s WHERE s.id = ?
+             UNION
+             SELECT s.code FROM media_categories mc
+             JOIN categories c ON c.id = mc.category_id
+             JOIN sections s   ON s.id = c.section_id
+             WHERE mc.media_id = ?",
+            [$primarySectionId, $mediaId]
+        );
+        return array_values(array_unique(array_map(static fn ($r) => (string) $r['code'], $rows)));
+    }
+
     public static function create(array $data): int
     {
         Database::execute(
@@ -159,14 +181,33 @@ final class Media
         $where = [];
         $params = [];
 
-        // section visibility
+        // Section visibility.
+        // A media item is visible when EITHER its primary section is allowed,
+        // OR it has at least one category that belongs to an allowed section.
+        // This means a file filed under both Graphics and Events (or only
+        // Events) correctly shows up for an Events user, even though each
+        // media row only stores a single "primary" section_id.
         $secMarks = implode(',', array_fill(0, count($allowedSections), '?'));
-        $where[] = "s.code IN ($secMarks)";
-        foreach ($allowedSections as $sc) $params[] = $sc;
+        $where[] = "(s.code IN ($secMarks) OR EXISTS (
+            SELECT 1 FROM media_categories mcv
+            JOIN categories cv ON cv.id = mcv.category_id
+            JOIN sections sv   ON sv.id = cv.section_id
+            WHERE mcv.media_id = m.id AND sv.code IN ($secMarks)
+        ))";
+        foreach ($allowedSections as $sc) $params[] = $sc; // primary section IN (...)
+        foreach ($allowedSections as $sc) $params[] = $sc; // category-section EXISTS IN (...)
 
         if (!empty($filters['section_code']) && empty($filters['category_id'])) {
             if (in_array($filters['section_code'], $allowedSections, true)) {
-                $where[] = "s.code = ?";
+                // Match the section either as the primary section OR via an
+                // attached category's section, mirroring the visibility rule.
+                $where[] = "(s.code = ? OR EXISTS (
+                    SELECT 1 FROM media_categories mcs
+                    JOIN categories cs ON cs.id = mcs.category_id
+                    JOIN sections ss   ON ss.id = cs.section_id
+                    WHERE mcs.media_id = m.id AND ss.code = ?
+                ))";
+                $params[] = $filters['section_code'];
                 $params[] = $filters['section_code'];
             }
         }
@@ -334,11 +375,20 @@ final class Media
         // -- result set when they hit Enter without picking a suggestion.
         if ($allowedSections) {
             $marks = implode(',', array_fill(0, count($allowedSections), '?'));
-            $params = array_merge($allowedSections, [$start, $like, $like, $start]);
+            $params = array_merge(
+                $allowedSections,                 // primary section IN (...)
+                $allowedSections,                 // category-section EXISTS IN (...)
+                [$start, $like, $like, $start]
+            );
             $rows = Database::all(
                 "SELECT m.uuid, m.title, m.media_type
                  FROM media m JOIN sections s ON s.id = m.section_id
-                 WHERE s.code IN ($marks)
+                 WHERE (s.code IN ($marks) OR EXISTS (
+                            SELECT 1 FROM media_categories mcv
+                            JOIN categories cv ON cv.id = mcv.category_id
+                            JOIN sections sv   ON sv.id = cv.section_id
+                            WHERE mcv.media_id = m.id AND sv.code IN ($marks)
+                        ))
                    AND (m.title LIKE ? OR m.description LIKE ? OR m.keywords LIKE ?)
                  ORDER BY (m.title LIKE ?) DESC, m.is_featured DESC, m.created_at DESC
                  LIMIT $perBucket",

@@ -11,6 +11,10 @@ $this->extend('layouts/app');
 <div class="admin-shell">
     <?php require __DIR__ . '/_nav.php'; ?>
     <section class="admin-content">
+        <a class="back-link" href="<?= url('/dashboard') ?>">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </a>
         <h1>Admin Overview</h1>
 
         <div class="stat-grid">

@@ -117,6 +117,37 @@ final class Auth
         return $sectionCode === 'graphics' ? self::flag('can_graphics') : self::flag('can_events');
     }
 
+    /**
+     * Section codes the current user is allowed to access.
+     * Super admins implicitly get both sections.
+     *
+     * @return array<int,string>
+     */
+    public static function allowedSections(): array
+    {
+        if (self::isSuperAdmin()) return ['graphics', 'events'];
+        $allowed = [];
+        if (self::canSection('graphics')) $allowed[] = 'graphics';
+        if (self::canSection('events'))   $allowed[] = 'events';
+        return $allowed;
+    }
+
+    /**
+     * True when the user can access ANY of the given section codes.
+     *
+     * A single media row stores one "primary" section_id, but a file can be
+     * filed under categories from more than one section (e.g. both Graphics
+     * and Events). This lets us authorise access based on every section a
+     * media item touches, not just its primary one.
+     *
+     * @param array<int,string> $sectionCodes
+     */
+    public static function canAccessSections(array $sectionCodes): bool
+    {
+        if (self::isSuperAdmin()) return true;
+        return count(array_intersect($sectionCodes, self::allowedSections())) > 0;
+    }
+
     public static function canUpload(): bool   { return self::isSuperAdmin() || self::flag('can_upload'); }
     public static function canEdit(): bool     { return self::isSuperAdmin() || self::flag('can_edit'); }
     public static function canDelete(): bool   { return self::isSuperAdmin() || self::flag('can_delete'); }

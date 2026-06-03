@@ -178,7 +178,8 @@ final class StreamController
         if (!$m) { http_response_code(404); return null; }
 
         $section = Section::find((int) $m['section_id']);
-        if (!$section || !Auth::canSection((string) $section['code'])) {
+        $mediaSectionCodes = Media::sectionCodesFor((int) $m['id'], (int) $m['section_id']);
+        if (!$section || !Auth::canAccessSections($mediaSectionCodes)) {
             http_response_code(403); return null;
         }
 

@@ -51,10 +51,6 @@ final class DashboardController
     /** @return array<int,string> */
     private function allowedSectionCodes(): array
     {
-        if (Auth::isSuperAdmin()) return ['graphics', 'events'];
-        $allowed = [];
-        if (Auth::canSection('graphics')) $allowed[] = 'graphics';
-        if (Auth::canSection('events'))   $allowed[] = 'events';
-        return $allowed;
+        return Auth::allowedSections();
     }
 }
