@@ -1,13 +1,15 @@
 /* Greyshades - secure HTML5 video player with HLS.js fallback to MP4.
  *
- * A single, YouTube-style settings (gear) menu sits in the top-right of the
- * player. It contains two rows - "Quality" and "Playback speed" - each of
- * which opens a submenu of choices. This keeps the main control bar clean.
+ * The browser's native overflow ("three-dot") menu is suppressed on the
+ * <video> element (controlsList="nodownload noremoteplayback noplaybackrate"
+ * + disablepictureinpicture), so there is exactly ONE settings menu: the
+ * custom three-dot button in the top-right of the player.
  *
- * Quality switching is only possible through HLS.js (adaptive renditions:
- * 240p / 480p / 720p / 1080p). Native HLS (Safari) and the plain MP4 fallback
- * manage quality themselves, so the gear menu is only built for the HLS.js
- * path. Playback speed is always offered there too.
+ * That single menu always offers "Playback speed" and, when the video is an
+ * adaptive HLS stream played through HLS.js, a "Quality" submenu listing the
+ * available renditions (Auto / 240p / 480p / 720p / 1080p...). Native HLS
+ * (Safari) and the plain MP4 fallback can't expose a JS quality API, so only
+ * Playback speed is shown there.
  */
 (() => {
     'use strict';
@@ -22,7 +24,7 @@
         if (mp4Src) video.src = mp4Src;
     };
 
-    const gearSvg =
+    const dotsSvg =
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">' +
         '<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
     const chevron = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>';
@@ -34,11 +36,15 @@
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     /**
-     * Build the gear settings menu. `hls` may be an HLS.js instance (enables
-     * the Quality row) or null (speed-only).
+     * Build the single settings menu. `hls` may be an HLS.js instance (enables
+     * the Quality submenu) or null (Playback speed only).
      */
     const buildSettingsMenu = (hls) => {
         if (!stage) return;
+        // Never allow two menus to coexist.
+        const existing = stage.querySelector('.gs-settings');
+        if (existing) existing.remove();
+
         const levels = hls ? (hls.levels || []) : [];
         const hasQuality = levels.length >= 2;
 
@@ -49,7 +55,7 @@
         btn.type = 'button';
         btn.className = 'gs-settings-btn';
         btn.setAttribute('aria-label', 'Settings');
-        btn.innerHTML = gearSvg;
+        btn.innerHTML = dotsSvg;
 
         const panel = document.createElement('div');
         panel.className = 'gs-settings-panel';
@@ -97,16 +103,17 @@
 
         let view = 'main';
         const render = () => {
-            if (view === 'quality') {
+            if (view === 'quality' && hasQuality) {
                 panel.innerHTML = back('Quality') +
                     qualityOptions().map(o => choice('q', o.value, o.label, isQualityActive(o.value))).join('');
             } else if (view === 'speed') {
                 panel.innerHTML = back('Playback speed') +
                     SPEEDS.map(s => choice('s', s, speedLabel(s), Math.abs((video.playbackRate || 1) - s) < 0.001)).join('');
             } else {
+                view = 'main';
                 panel.innerHTML =
-                    (hasQuality ? row('quality', 'Quality', currentQualityLabel()) : '') +
-                    row('speed', 'Playback speed', currentSpeedLabel());
+                    row('speed', 'Playback speed', currentSpeedLabel()) +
+                    (hasQuality ? row('quality', 'Quality', currentQualityLabel()) : '');
             }
         };
 
@@ -153,19 +160,21 @@
                 if (data.fatal) {
                     console.warn('[player] HLS fatal, falling back to MP4', data);
                     hls.destroy();
-                    const s = stage && stage.querySelector('.gs-settings');
-                    if (s) s.remove();
                     startNative();
+                    buildSettingsMenu(null); // keep speed control after fallback
                 }
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             // Safari / native HLS - browser manages adaptive quality itself.
             video.src = hlsSrc;
+            buildSettingsMenu(null);
         } else {
             startNative();
+            buildSettingsMenu(null);
         }
     } else {
         startNative();
+        buildSettingsMenu(null);
     }
 
     // Disable native context menu on the video itself

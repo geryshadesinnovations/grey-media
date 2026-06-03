@@ -26,7 +26,7 @@ $previewUrl = url('/preview/' . $media['uuid']);
             <video id="gs-video"
                    class="gs-player"
                    controls
-                   controlsList="nodownload noremoteplayback"
+                   controlsList="nodownload noremoteplayback noplaybackrate"
                    disablepictureinpicture
                    playsinline
                    preload="metadata"
