@@ -605,39 +605,49 @@ html[data-theme="light"] select option {
 @media (max-width: 960px) {
   body.drawer-open { overflow: hidden; }
 
-  /* The admin hamburger button (only rendered on mobile). */
+  /* The hamburger button (only rendered on mobile). */
   .admin-nav-toggle, .nav-toggle {
     display: inline-flex; align-items: center; gap: .5rem; justify-self: start;
     margin-bottom: 1rem; padding: .55rem .9rem; border-radius: 10px; font-weight: 600;
     background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer;
   }
 
-  /* Off-canvas drawer panel shared by .sidebar and .admin-nav. */
+  /* Off-canvas drawer panel shared by .sidebar and .admin-nav.
+     A flex column: a fixed header on top + a scrollable body below, so menu
+     content never slides under the header. The panel sits above the overlay
+     because app.js injects the overlay as a sibling in the same stacking
+     context (avoids the body-level overlay painting over a nested drawer). */
   .drawer {
     position: fixed !important; top: 0; left: 0; bottom: 0;
     width: min(86vw, 330px); max-height: none; margin: 0; border-radius: 0;
-    z-index: 1001; display: block !important;
+    z-index: 1001;
+    display: flex !important; flex-direction: column;
     background: var(--bg-1); border: 0; border-right: 1px solid var(--border);
     box-shadow: 0 24px 60px rgba(0,0,0,.45);
-    overflow-y: auto; padding: 1rem;
+    padding: 0; overflow: hidden;
     transform: translateX(-100%); transition: transform .28s ease;
-    -webkit-overflow-scrolling: touch;
   }
   .drawer.open { transform: translateX(0); }
 
-  /* Sticky close bar at the top of the drawer. */
+  /* Clearly-visible, non-scrolling header bar with title + close button. */
   .drawer .drawer-head {
-    position: sticky; top: 0; z-index: 2;
-    display: flex; align-items: center; justify-content: flex-end;
-    margin: -1rem -1rem .75rem; padding: .55rem .7rem;
-    background: var(--bg-1); border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    min-height: 56px; padding: .75rem 1rem;
+    background: var(--bg-2); border-bottom: 1px solid var(--border);
   }
+  .drawer .drawer-title { font-size: 15px; font-weight: 700; color: var(--text); }
   .drawer .drawer-close {
+    flex: 0 0 auto;
     display: inline-flex; align-items: center; justify-content: center;
     width: 36px; height: 36px; border-radius: 10px;
     background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer;
   }
   .drawer .drawer-close:hover { background: var(--accent-soft); color: var(--accent); }
+
+  /* Scrollable content area below the fixed header. */
+  .drawer .drawer-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1rem; }
+  .drawer .drawer-body > h4 { display: none; } /* redundant with the header title on mobile */
 }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }

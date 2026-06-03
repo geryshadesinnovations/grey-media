@@ -63,11 +63,16 @@
         const drawers = document.querySelectorAll('.drawer');
         if (!drawers.length) return;
 
+        // Inject the overlay as a sibling of the drawer (same parent) so they
+        // share one stacking context. This guarantees the drawer (z-index
+        // 1001) always paints above the overlay (z-index 1000), regardless of
+        // any stacking context created by ancestor elements.
+        const firstDrawer = drawers[0];
         let overlay = document.querySelector('.drawer-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.className = 'drawer-overlay';
-            document.body.appendChild(overlay);
+            firstDrawer.parentNode.insertBefore(overlay, firstDrawer);
         }
 
         const closeAll = () => {
