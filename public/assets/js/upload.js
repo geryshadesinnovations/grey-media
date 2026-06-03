@@ -18,7 +18,12 @@
 (() => {
     'use strict';
 
-    const form     = document.getElementById('upload-form');
+    // This script powers BOTH the Upload form (#upload-form) and the Edit
+    // Media form (#edit-form). The file-dropzone / submit wiring only exists
+    // on the upload page; the category-selection logic (counts, summary
+    // chips, mutual exclusion) must run on both. We therefore look up either
+    // form and guard the upload-only pieces with element existence checks.
+    const form     = document.getElementById('upload-form') || document.getElementById('edit-form');
     if (!form) return;
     const input    = document.getElementById('file-input');
     const drop     = document.getElementById('drop-area');
@@ -176,6 +181,10 @@
         updateThumbnailVisibility(fileType(file));
     };
 
+    // The dropzone, file input, browse button and live preview only exist on
+    // the Upload page. The Edit page reuses this script purely for category
+    // selection, so skip all of this when those elements aren't present.
+    if (drop && input) {
     drop.addEventListener('click', (e) => {
         if (e.target.closest('button') || e.target.closest('a')) return;
         input.click();
@@ -194,6 +203,7 @@
     input.addEventListener('change', () => {
         if (input.files?.length) selectFile(input.files[0]);
     });
+    } // end file-picker wiring (upload page only)
 
     /* ---------- Submit ---------- */
     if (submitBtn) {

@@ -138,8 +138,9 @@ final class MediaProcessor
         if (!is_dir($tmpDir) && !mkdir($tmpDir, 0775, true) && !is_dir($tmpDir)) return null;
 
         $cmd = sprintf(
-            '%s --headless --convert-to pdf --outdir %s %s 2>&1',
+            '%s --headless %s --convert-to pdf --outdir %s %s 2>&1',
             escapeshellcmd($lo),
+            escapeshellarg('-env:UserInstallation=file://' . $tmpDir . '/.lo_profile'),
             escapeshellarg($tmpDir),
             escapeshellarg($absPpt)
         );
@@ -169,8 +170,9 @@ final class MediaProcessor
 
         // 1. Convert PPT -> PDF in temp dir
         $cmd = sprintf(
-            '%s --headless --convert-to pdf --outdir %s %s 2>&1',
+            '%s --headless %s --convert-to pdf --outdir %s %s 2>&1',
             escapeshellcmd($lo),
+            escapeshellarg('-env:UserInstallation=file://' . $tmpDir . '/.lo_profile'),
             escapeshellarg($tmpDir),
             escapeshellarg($absPpt)
         );

@@ -69,8 +69,11 @@ header('X-Frame-Options: SAMEORIGIN');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
 // CSP: allow inline for our hashed scripts; in production tighten further.
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; "
-     . "media-src 'self' blob:; style-src 'self' 'unsafe-inline'; "
+// jsDelivr is permitted for the small set of CDN assets we use (hls.js for
+// adaptive video, and PPTXjs for in-browser PowerPoint rendering, which also
+// pulls a stylesheet and some images from the CDN).
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob: https://cdn.jsdelivr.net; "
+     . "media-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
      . "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
      . "font-src 'self' data: https://cdn.jsdelivr.net; "
      . "connect-src 'self' https://cdn.jsdelivr.net; frame-ancestors 'self'");

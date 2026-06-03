@@ -42,7 +42,7 @@ $previewUrl = url('/preview/' . $media['uuid']);
         <?php elseif ($type === 'pdf'): ?>
             <div class="pdf-stage">
                 <iframe class="doc-frame"
-                        src="<?= e($streamUrl) ?>#toolbar=1&navpanes=0&view=FitH"
+                        src="<?= e($streamUrl) ?>#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
                         title="<?= e($media['title']) ?>"
                         loading="lazy"></iframe>
             </div>
@@ -51,16 +51,17 @@ $previewUrl = url('/preview/' . $media['uuid']);
             <?php if (!empty($media['preview_path'])): ?>
             <div class="pdf-stage">
                 <iframe class="doc-frame"
-                        src="<?= e($previewUrl) ?>#toolbar=1&navpanes=0&view=FitH"
+                        src="<?= e($previewUrl) ?>#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
                         title="<?= e($media['title']) ?>"
                         loading="lazy"></iframe>
             </div>
             <?php else: ?>
-            <div class="doc-fallback">
-                <?php if (!empty($media['thumbnail_path'])): ?>
-                    <img src="<?= url('/thumb/' . $media['uuid']) ?>" alt="<?= e($media['title']) ?>">
-                <?php endif; ?>
-                <p class="muted">A slide-by-slide preview for this presentation isn't available yet. You can download the original file if you have permission.</p>
+            <div class="ppt-viewer-wrap">
+                <div id="ppt-viewer" class="pptx-host" data-src="<?= e($streamUrl) ?>"></div>
+                <div id="ppt-status" class="ppt-status">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span>Rendering presentation…</span>
+                </div>
             </div>
             <?php endif; ?>
 
@@ -126,5 +127,7 @@ $previewUrl = url('/preview/' . $media['uuid']);
 <?php if ($type === 'video'): ?>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" defer></script>
 <script src="<?= asset('js/player.js') ?>" defer></script>
+<?php elseif ($type === 'ppt' && empty($media['preview_path'])): ?>
+<script src="<?= asset('js/ppt-viewer.js') ?>" defer></script>
 <?php endif; ?>
 <?php $this->endSection(); ?>
