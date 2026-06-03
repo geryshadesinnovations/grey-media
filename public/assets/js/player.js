@@ -118,6 +118,11 @@
         };
 
         panel.addEventListener('click', (e) => {
+            // Stop the click reaching the document "close on outside click"
+            // listener. render() rebuilds the panel's innerHTML, which detaches
+            // e.target; by the time the document handler runs, wrap.contains()
+            // would be false and the menu would wrongly close on every click.
+            e.stopPropagation();
             const rowEl = e.target.closest('[data-row]');
             if (rowEl) { view = rowEl.dataset.row; render(); return; }
             if (e.target.closest('[data-back]')) { view = 'main'; render(); return; }
