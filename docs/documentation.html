@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Greyshades Media Platform — Complete Documentation</title>
+<meta name="description" content="Beginner-friendly, complete documentation for the Greyshades Innovations Media Platform.">
+<style>
+  :root{
+    --bg:#0f1117; --bg2:#161922; --card:#1b1f2b; --card2:#212636;
+    --text:#e8eaf0; --muted:#9aa3b6; --line:#2a3042;
+    --accent:#7c5cff; --accent2:#22d3ee; --accent-soft:rgba(124,92,255,.16);
+    --green:#34d399; --green-bg:rgba(52,211,153,.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,.12);
+    --red:#f87171;   --red-bg:rgba(248,113,113,.12);
+    --blue:#60a5fa;  --blue-bg:rgba(96,165,250,.12);
+    --radius:14px; --sidebar:300px; --maxw:1000px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;font-family:var(--sans);background:var(--bg);color:var(--text);
+    line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.88em;background:#0c0e14;border:1px solid var(--line);
+    padding:.12em .42em;border-radius:6px;color:#ffd9a0}
+  pre{background:#0a0c12;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;margin:14px 0}
+  pre code{background:none;border:0;padding:0;color:#d6e0ff;font-size:.85em;line-height:1.6}
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex;min-height:100vh}
+  .sidebar{
+    width:var(--sidebar);flex:0 0 var(--sidebar);background:var(--bg2);border-right:1px solid var(--line);
+    position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:40;padding:18px 14px 60px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 14px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .brand .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;place-items:center;font-weight:800;color:#fff;font-size:20px}
+  .brand b{font-size:15px;display:block}
+  .brand small{color:var(--muted);font-size:11.5px}
+  .search-box{position:relative;margin:6px 0 14px}
+  .search-box input{width:100%;padding:10px 12px 10px 34px;border-radius:10px;border:1px solid var(--line);
+    background:#0c0e14;color:var(--text);font-size:14px}
+  .search-box svg{position:absolute;left:10px;top:11px;width:16px;height:16px;stroke:var(--muted)}
+  nav.toc{font-size:13.6px}
+  nav.toc a{display:block;color:var(--muted);padding:6px 10px;border-radius:8px;line-height:1.35}
+  nav.toc a:hover{background:var(--card);color:var(--text);text-decoration:none}
+  nav.toc a.active{background:var(--accent-soft);color:#fff;border-left:2px solid var(--accent)}
+  nav.toc .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#5d6680;
+    padding:14px 10px 4px;font-weight:700}
+  nav.toc a.hidden{display:none}
+
+  .content{margin-left:var(--sidebar);flex:1;min-width:0;padding:40px 36px 120px}
+  .wrap{max-width:var(--maxw);margin:0 auto}
+
+  h1,h2,h3,h4{line-height:1.25;scroll-margin-top:20px}
+  h1{font-size:30px;margin:0 0 6px}
+  .section{padding:30px 0;border-top:1px solid var(--line)}
+  .section:first-of-type{border-top:0}
+  .section>h2{font-size:24px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+  .section>h2 .num{font-size:13px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:0 0 30px}
+  .section .lead{color:var(--muted);margin:0 0 18px;font-size:15px}
+  h3{font-size:18.5px;margin:26px 0 8px;color:#fff}
+  h4{font-size:15.5px;margin:18px 0 6px;color:#cfd6e6}
+
+  .hero{background:linear-gradient(135deg,rgba(124,92,255,.18),rgba(34,211,238,.10));
+    border:1px solid var(--line);border-radius:18px;padding:30px;margin-bottom:10px}
+  .hero h1{font-size:34px}
+  .hero p{color:#c7cee0;max-width:760px}
+  .pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);
+    border:1px solid var(--line);color:#cdbcff;margin:2px 4px 2px 0}
+
+  /* ---------- Callouts ---------- */
+  .cal{border-radius:12px;padding:13px 16px;margin:16px 0;border:1px solid var(--line);font-size:14.5px}
+  .cal p:first-child{margin-top:0}.cal p:last-child{margin-bottom:0}
+  .cal .t{font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .cal.note{background:var(--blue-bg);border-color:rgba(96,165,250,.4)}
+  .cal.note .t{color:var(--blue)}
+  .cal.tip{background:var(--green-bg);border-color:rgba(52,211,153,.4)}
+  .cal.tip .t{color:var(--green)}
+  .cal.warn{background:var(--amber-bg);border-color:rgba(251,191,36,.4)}
+  .cal.warn .t{color:var(--amber)}
+  .cal.danger{background:var(--red-bg);border-color:rgba(248,113,113,.45)}
+  .cal.danger .t{color:var(--red)}
+
+  /* ---------- Tables ---------- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:16px 0}
+  table{border-collapse:collapse;width:100%;font-size:13.8px;min-width:520px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#0c0e14;color:#cfd6e6;font-weight:700;position:sticky;top:0}
+  tr:last-child td{border-bottom:0}
+  td code{white-space:nowrap}
+
+  /* ---------- Collapsible (details) ---------- */
+  details.box{border:1px solid var(--line);border-radius:12px;margin:12px 0;background:var(--card);overflow:hidden}
+  details.box>summary{cursor:pointer;padding:13px 16px;font-weight:600;list-style:none;display:flex;
+    align-items:center;gap:10px;background:var(--card2)}
+  details.box>summary::-webkit-details-marker{display:none}
+  details.box>summary::before{content:"▸";color:var(--accent2);transition:transform .15s}
+  details.box[open]>summary::before{transform:rotate(90deg)}
+  details.box>summary:hover{background:#262c3e}
+  details.box .body{padding:6px 16px 16px}
+  details.box .tag{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+
+  .filecard{border-left:3px solid var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:14px;margin:8px 0}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .mermaid{background:#0a0c12;border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;text-align:center}
+  .ph{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);
+    background:repeating-linear-gradient(45deg,#12151e,#12151e 12px,#141824 12px,#141824 24px);margin:14px 0;font-size:13.5px}
+  .toolbar{position:sticky;top:0;z-index:20;background:rgba(15,17,23,.86);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 0;margin:-40px 0 20px;display:flex;gap:8px;align-items:center}
+  .toolbar .menu-btn{display:none}
+  .btn{background:var(--card2);border:1px solid var(--line);color:var(--text);border-radius:9px;
+    padding:7px 12px;font-size:13px;cursor:pointer}
+  .btn:hover{background:#2a3043}
+  .crumbs{color:var(--muted);font-size:13px;margin-left:auto}
+  .backtop{position:fixed;right:18px;bottom:18px;z-index:50;background:var(--accent);color:#fff;border:0;
+    width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s}
+  .backtop.show{opacity:1;pointer-events:auto}
+  .scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:39}
+  ul.clean{padding-left:18px}ul.clean li{margin:4px 0}
+  .legend span{display:inline-block;margin-right:14px;font-size:12.5px;color:var(--muted)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+  /* ---------- Mobile ---------- */
+  @media(max-width:1024px){
+    .sidebar{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.5)}
+    .sidebar.open{transform:translateX(0)}
+    .content{margin-left:0}
+    .toolbar .menu-btn{display:inline-flex}
+    .scrim.open{display:block}
+  }
+  @media(max-width:560px){
+    .content{padding:30px 16px 100px}
+    .toolbar{margin:-30px 0 18px}
+    .kv{grid-template-columns:1fr}
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">G</div>
+      <div><b>Greyshades Docs</b><small>Media Platform · Full Guide</small></div>
+    </div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="navSearch" type="search" placeholder="Search the docs…" autocomplete="off">
+    </div>
+    <nav class="toc" id="toc">
+      <div class="grp">Getting started</div>
+      <a href="#s1">1. Project Overview</a>
+      <a href="#s2">2. Technology Stack</a>
+      <a href="#s3">3. Folder Structure</a>
+      <div class="grp">Reference</div>
+      <a href="#s4">4. File-by-File Docs</a>
+      <a href="#s5">5. Frontend Architecture</a>
+      <a href="#s6">6. Backend Architecture</a>
+      <a href="#s7">7. Database</a>
+      <a href="#s8">8. Auth &amp; Permissions</a>
+      <div class="grp">How things work</div>
+      <a href="#s9">9. Feature Documentation</a>
+      <a href="#s10">10. UI Component Guide</a>
+      <a href="#s11">11. Mobile Responsive System</a>
+      <a href="#s12">12. Media Management</a>
+      <a href="#s13">13. Category System</a>
+      <div class="grp">Operate &amp; maintain</div>
+      <a href="#s14">14. Troubleshooting (50+)</a>
+      <a href="#s15">15. Change Request Guide</a>
+      <a href="#s16">16. Developer Onboarding</a>
+      <a href="#s17">17. Security</a>
+      <a href="#s18">18. Data Flow Diagrams</a>
+      <a href="#s19">19. Glossary</a>
+      <a href="#s20">20. Future Improvements</a>
+    </nav>
+  </aside>
+
+  <!-- ================= CONTENT ================= -->
+  <main class="content">
+   <div class="wrap">
+    <div class="toolbar">
+      <button class="btn menu-btn" id="menuBtn">☰ Menu</button>
+      <button class="btn" id="expandAll">Expand all</button>
+      <button class="btn" id="collapseAll">Collapse all</button>
+      <span class="crumbs" id="crumbs">Documentation</span>
+    </div>
+
+    <div class="hero">
+      <h1>Greyshades Media Platform</h1>
+      <p>A complete, beginner-friendly guide to the entire application — what it does, how it is built,
+      where every file lives, how data moves through the system, and exactly where to make changes or fix problems.
+      No coding experience required to understand the concepts.</p>
+      <div style="margin-top:12px">
+        <span class="pill">PHP 8.2+</span><span class="pill">MySQL / MariaDB</span><span class="pill">Vanilla JS</span>
+        <span class="pill">Custom MVC</span><span class="pill">No build step</span><span class="pill">Secure streaming</span>
+      </div>
+    </div>
+
+    <!-- ===================================================== SECTION 1 -->
+    <section class="section" id="s1">
+      <h2><span class="num">1</span> Project Overview</h2>
+      <p class="lead">Read this first. It explains, in plain words, what the system is for and who uses it.</p>
+
+      <h3>What this application does</h3>
+      <p>The Greyshades Media Platform is a private, password-protected library for a company's digital files —
+      videos, images, PDFs and PowerPoint presentations. Think of it like a <b>secure, branded version of Google Drive
+      mixed with Netflix</b>: staff log in, browse neatly organised categories, and view media safely. The files are never
+      exposed by a direct web address; the system hands them out only to logged-in people who are allowed to see them,
+      and it records who looked at what.</p>
+
+      <div class="cal tip"><div class="t">🟢 In one sentence</div>
+      It is a secure “digital asset management” (DAM) website where a company stores its marketing/creative media and
+      controls exactly who can view or download each item.</div>
+
+      <h3>Business purpose</h3>
+      <ul class="clean">
+        <li><b>Protect valuable creative work.</b> Designs, videos and presentations are the company's product. The platform stops casual copying and traces any leak back to the exact viewer (via a moving on-screen watermark).</li>
+        <li><b>Organise everything in one place.</b> A single file can appear under many categories and themes without being duplicated on disk.</li>
+        <li><b>Control access.</b> Different teams (Graphics vs Events) only see what they are allowed to see.</li>
+        <li><b>Audit everything.</b> Every login, view, upload and download is logged for accountability.</li>
+      </ul>
+
+      <h3>Main features</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Feature</th><th>What it means for a normal user</th></tr>
+        <tr><td>Secure login</td><td>Only invited staff with an email + password can enter. Too many wrong tries are blocked.</td></tr>
+        <tr><td>Dashboard &amp; search</td><td>A Pinterest-style grid of media with filters (section, category, type, company) and a smart search box.</td></tr>
+        <tr><td>Categories &amp; occasions</td><td>Files are filed under nested categories (e.g. <i>Art → Videos → Invitation Videos</i>) and tagged with occasions (e.g. <i>Diwali</i>).</td></tr>
+        <tr><td>Upload</td><td>Drag-and-drop upload with a progress bar; the same file is never stored twice.</td></tr>
+        <tr><td>Viewers</td><td>Built-in players for video (with quality selector), PDF, PowerPoint and images.</td></tr>
+        <tr><td>Watermark &amp; protection</td><td>A moving label with the viewer's name/email is painted over media; right-click and dev-tools shortcuts are discouraged.</td></tr>
+        <tr><td>Admin panel</td><td>Manage users, categories, companies, view activity logs and see who is online right now.</td></tr>
+      </table></div>
+
+      <h3>User types (roles)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Role</th><th>What they can do</th></tr>
+        <tr><td><b>Super Admin</b></td><td>Everything: see both sections, manage users/categories/companies, upload, edit, delete, download, view logs.</td></tr>
+        <tr><td><b>Graphics User</b></td><td>View the <i>Greyshades Graphics</i> section only (by default, view-only).</td></tr>
+        <tr><td><b>Events User</b></td><td>View the <i>Greyshades Events</i> section only.</td></tr>
+        <tr><td><b>Combined User</b></td><td>View both sections.</td></tr>
+      </table></div>
+      <div class="cal note"><div class="t">🔵 Note</div>The role sets the “floor”, but each user also has individual on/off switches
+      (can upload, can edit, can delete, can download, can manage users). See <a href="#s8">Section 8</a>.</div>
+
+      <h3>Benefits of the system</h3>
+      <ul class="clean">
+        <li>No expensive third-party software or monthly licences — it runs on ordinary, inexpensive web hosting.</li>
+        <li>No complicated installation tools (no Node.js build, no Composer required to run it).</li>
+        <li>Files stay private and traceable.</li>
+        <li>Works on phones, tablets and desktops.</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== SECTION 2 -->
+    <section class="section" id="s2">
+      <h2><span class="num">2</span> Technology Stack</h2>
+      <p class="lead">The “stack” is simply the list of tools used to build the app. Each one is explained below in plain terms.</p>
+
+      <div class="cal note"><div class="t">🔵 What “frontend” and “backend” mean</div>
+      <b>Frontend</b> = everything that runs in your web browser (what you see and click).
+      <b>Backend</b> = the program running on the server (the computer in a data centre) that decides what to send back.</div>
+
+      <details class="box" open><summary>Backend — PHP 8.2+ <span class="tag">the engine</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What it does</div><div>PHP is the programming language running on the server. It checks logins, talks to the database, and builds the HTML pages that get sent to the browser.</div>
+            <div>Why chosen</div><div>It is available on virtually all cheap web hosts, needs no build step, and the team already knows it. A small custom “MVC” framework was written by hand instead of using a big framework like Laravel.</div>
+            <div>If removed</div><div>The entire application stops — there would be no server program to handle logins, uploads or pages.</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Database — MySQL 8 / MariaDB 10.5+ <span class="tag">the filing cabinet</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What it does</div><div>Stores all the structured information: users, categories, the list of media files (but not the files themselves), logs, sessions, etc.</div>
+            <div>Why chosen</div><div>Free, extremely common, easy to manage with phpMyAdmin, and reliable.</div>
+            <div>If removed</div><div>The app cannot remember anything — no users, no media list, no logins. It would crash on the first page with “Database connection failed”.</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Frontend — HTML5 + CSS3 + Vanilla JavaScript <span class="tag">what you see</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What it does</div><div>HTML is the page structure, CSS is the styling/colours/layout, and JavaScript adds interactivity (drag-drop upload, the video menu, the mobile hamburger menu).</div>
+            <div>Why chosen</div><div>“Vanilla” means plain JavaScript with no heavy framework (no React/Vue). This keeps the project tiny, fast, and means anyone who knows basic web skills can edit it.</div>
+            <div>If removed</div><div>Remove CSS → the site looks like a plain text document. Remove JS → uploads, video quality menu, search suggestions and mobile menus stop working, but pages still load.</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Authentication — PHP Sessions (no JWT) <span class="tag">the “who are you?” system</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What it does</div><div>When you log in, the server remembers you using a “session” — a secret ID stored in a browser cookie. There are <b>no JWT tokens</b> for login; it is classic, server-side sessions.</div>
+            <div>Why chosen</div><div>Sessions are simple, secure, and let an admin instantly log someone out (important for a security-focused tool).</div>
+            <div>If removed</div><div>Nobody could stay logged in; every page would treat you as a stranger.</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Storage — Server file system (private folders) <span class="tag">where files live</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What it does</div><div>Actual uploaded files live in a private <code>storage/</code> folder on the server — never in the public web folder. PHP reads them and streams them to authorised users.</div>
+            <div>Why chosen</div><div>Keeps files off the public internet so their real address can never be shared.</div>
+            <div>If removed</div><div>There would be nowhere to keep uploaded media; uploads would fail.</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Media tools — FFmpeg, ImageMagick, LibreOffice <span class="tag">optional helpers</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What they do</div><div><b>FFmpeg</b> makes video thumbnails and multi-quality streaming versions. <b>ImageMagick</b> makes image/PDF thumbnails. <b>LibreOffice</b> converts PowerPoint into PDF for in-browser viewing.</div>
+            <div>Why chosen</div><div>Industry-standard, free command-line tools.</div>
+            <div>If removed</div><div>Uploads still succeed, but automatic previews / video quality options / PowerPoint-to-PDF are skipped. The app is built to “degrade gracefully” — it never crashes just because a tool is missing.</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Libraries via CDN — hls.js, PPTXjs, Mermaid <span class="tag">loaded from the internet</span></summary>
+        <div class="body">
+          <p>A “CDN” is a fast public file server. The app pulls a few helper libraries from <code>cdn.jsdelivr.net</code>:</p>
+          <div class="tablewrap"><table>
+            <tr><th>Library</th><th>Used for</th><th>If removed</th></tr>
+            <tr><td>hls.js</td><td>Playing multi-quality streaming video in the browser</td><td>Video falls back to a single MP4; the quality selector disappears.</td></tr>
+            <tr><td>PPTXjs</td><td>Showing PowerPoint slides in the browser when no PDF preview exists</td><td>PPT files show a “can't display” message + download option.</td></tr>
+            <tr><td>Mermaid</td><td>Only used in <i>this documentation page</i> to draw diagrams</td><td>Diagrams in this doc won't render; the app itself is unaffected.</td></tr>
+          </table></div>
+        </div>
+      </details>
+
+      <details class="box"><summary>Web server — Apache (with .htaccess) or Nginx <span class="tag">the front door</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>What it does</div><div>The web server receives every browser request and forwards it to PHP. The <code>.htaccess</code> files route all traffic into one entry file and block access to private folders.</div>
+            <div>Why chosen</div><div>Apache is the default on most shared hosting and supports <code>.htaccess</code> rules out of the box.</div>
+            <div>If removed/misconfigured</div><div>URLs would break (404 errors) or private folders like <code>storage/</code> could become publicly downloadable — a serious security risk.</div>
+          </div>
+        </div>
+      </details>
+
+      <div class="cal warn"><div class="t">🟠 No build tools</div>
+      Unlike many modern websites, this project has <b>no compile/build step</b>. You edit a PHP/CSS/JS file and refresh —
+      the change is live. There is no <code>npm install</code> or <code>composer install</code> needed just to run it.</div>
+    </section>
+
+
+    <!-- ===================================================== SECTION 3 -->
+    <section class="section" id="s3">
+      <h2><span class="num">3</span> Complete Folder Structure</h2>
+      <p class="lead">A “folder” (or “directory”) is just a labelled container for files. Here is the whole project laid out like a tree.</p>
+
+<pre><code>grey-media/
+├── .env                      ← secret settings (passwords, paths) — NEVER public
+├── .htaccess                 ← sends all traffic into the /public folder
+├── .gitignore                ← list of files Git should not track
+├── README.md                 ← short technical readme for developers
+│
+├── app/                      ← THE BRAIN: all server-side program code
+│   ├── bootstrap.php         ← starts the app (config, sessions, security headers)
+│   ├── routes.php            ← the "address book": which URL runs which code
+│   ├── Controllers/          ← receive requests, decide what to do
+│   │   ├── AdminController.php
+│   │   ├── AuthController.php
+│   │   ├── DashboardController.php
+│   │   ├── MediaController.php
+│   │   ├── SearchController.php
+│   │   ├── StreamController.php
+│   │   └── UploadController.php
+│   ├── Core/                 ← shared building blocks used everywhere
+│   │   ├── ActivityLog.php
+│   │   ├── Auth.php
+│   │   ├── Csrf.php
+│   │   ├── Database.php
+│   │   ├── Router.php
+│   │   ├── StreamToken.php
+│   │   ├── View.php
+│   │   ├── helpers.php
+│   │   └── Middleware/       ← "security gates" run before a page
+│   │       ├── RequireAdmin.php
+│   │       ├── RequireAuth.php
+│   │       └── VerifyCsrf.php
+│   ├── Models/               ← talk to the database tables
+│   │   ├── Category.php
+│   │   ├── Company.php
+│   │   ├── Media.php
+│   │   ├── Occasion.php
+│   │   ├── Section.php
+│   │   ├── Tag.php
+│   │   └── User.php
+│   ├── Services/             ← heavy "worker" code
+│   │   └── MediaProcessor.php
+│   └── Views/                ← the HTML templates (what becomes the page)
+│       ├── layouts/          ← page frames shared by many pages
+│       │   ├── app.php
+│       │   └── auth.php
+│       ├── auth/login.php
+│       ├── dashboard/        ← the main media browser
+│       │   ├── index.php
+│       │   ├── _sidebar.php
+│       │   └── _card.php
+│       ├── media/            ← single-item pages
+│       │   ├── show.php
+│       │   └── edit.php
+│       ├── upload/form.php
+│       ├── admin/            ← admin panel pages
+│       │   ├── _nav.php
+│       │   ├── dashboard.php
+│       │   ├── users.php
+│       │   ├── categories.php
+│       │   ├── companies.php
+│       │   └── activity.php
+│       └── errors/           ← friendly error pages
+│           ├── 403.php
+│           └── 404.php
+│
+├── config/
+│   └── config.php            ← reads .env and exposes settings to the app
+│
+├── database/
+│   ├── schema.sql            ← creates all tables (run once)
+│   ├── seed.sql              ← fills starter data (roles, admin, categories)
+│   └── migrations/           ← later database changes
+│       ├── 2026_05_20_hybrid_subcategories.sql
+│       ├── 2026_05_20_backfill_media_category_ancestors.sql
+│       └── 2026_05_22_companies.sql
+│
+├── public/                   ← THE ONLY PUBLIC FOLDER (the website root)
+│   ├── index.php             ← the single "front door" every request enters
+│   ├── .htaccess             ← routing + security headers
+│   └── assets/
+│       ├── css/app.css       ← ALL styling for the whole app
+│       └── js/               ← browser-side interactivity
+│           ├── app.js            (theme, menus, drawers, tree)
+│           ├── upload.js         (drag-drop upload + category counts)
+│           ├── player.js         (video player + quality menu)
+│           ├── ppt-viewer.js     (in-browser PowerPoint)
+│           ├── search-suggest.js (search autocomplete)
+│           ├── watermark.js      (moving viewer watermark)
+│           └── security.js       (anti-copy deterrents)
+│
+├── storage/                  ← PRIVATE: uploaded files + logs (never public)
+│   ├── uploads/
+│   │   ├── originals/         ← the real uploaded files
+│   │   ├── thumbnails/        ← small preview images
+│   │   ├── pdf-previews/      ← first-page PNGs of PDFs
+│   │   ├── ppt-previews/      ← PPT converted to PDF
+│   │   └── hls/               ← multi-quality video bundles
+│   ├── cache/                ← temporary working files
+│   └── logs/                 ← error logs
+│
+└── docs/
+    └── documentation.html    ← THIS file you are reading
+</code></pre>
+
+      <h3>Why each top-level folder exists</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Folder</th><th>Purpose</th><th>Why it is separate</th></tr>
+        <tr><td><code>app/</code></td><td>All the server “thinking” code.</td><td>Kept private so the public can never read your logic.</td></tr>
+        <tr><td><code>config/</code></td><td>One place that reads settings.</td><td>So you change settings in one spot, not scattered everywhere.</td></tr>
+        <tr><td><code>database/</code></td><td>SQL scripts to build/seed the database.</td><td>Lets a new server be set up by importing two files.</td></tr>
+        <tr><td><code>public/</code></td><td>The only folder the web server points at.</td><td>Everything else stays hidden — a core security idea.</td></tr>
+        <tr><td><code>storage/</code></td><td>Uploaded files, logs, caches.</td><td>Files are served only through PHP, never by direct link.</td></tr>
+        <tr><td><code>docs/</code></td><td>This documentation.</td><td>Reference material, separate from the running app.</td></tr>
+      </table></div>
+
+      <div class="cal danger"><div class="t">🔴 Critical security rule</div>
+      The web server's “document root” must point at <code>public/</code> (or the root <code>.htaccess</code> must forward into it).
+      If it ever points at the project root <i>without</i> that rule, the private <code>storage/</code>, <code>app/</code> and <code>.env</code>
+      could be downloaded by anyone. This is the single most important configuration to get right.</div>
+    </section>
+
+    <!-- ===================================================== SECTION 4 -->
+    <section class="section" id="s4">
+      <h2><span class="num">4</span> Complete File-by-File Documentation</h2>
+      <p class="lead">Every file is documented below. Click a row to expand it. Each entry tells you what it does, what it depends on,
+      and — importantly — what happens if you <b>modify</b> or <b>delete</b> it, and <b>when you should edit it</b>.</p>
+
+      <div class="cal note"><div class="t">🔵 How to read these</div>
+      <b>Dependencies</b> = other files this one needs. <b>Functions</b> = named blocks of reusable instructions inside the file.
+      A “Controller” handles a request; a “Model” talks to the database; a “View” is an HTML template.</div>
+
+      <h3>4.1 — Entry &amp; configuration files</h3>
+
+      <details class="box filecard"><summary>public/index.php <span class="tag">front door</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Location</div><div><code>public/index.php</code></div>
+            <div>Purpose</div><div>The single entry point. Every web request (every page) starts here. It defines folder paths, loads the app, builds the router, loads routes, and dispatches.</div>
+            <div>Dependencies</div><div><code>app/bootstrap.php</code>, <code>app/routes.php</code>, <code>app/Core/Router.php</code></div>
+            <div>Functions</div><div>None (just top-level setup code).</div>
+          </div>
+          <p><b>If you modify it:</b> Rarely needed. Mistakes here break <i>every</i> page at once.</p>
+          <p><b>If you delete it:</b> The website returns nothing/500 errors — there is no entry point.</p>
+          <p><b>When to edit:</b> Almost never. Only to change very low-level startup behaviour.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/bootstrap.php <span class="tag">startup</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Location</div><div><code>app/bootstrap.php</code></div>
+            <div>Purpose</div><div>Prepares the app on every request: loads config, sets the timezone, registers the autoloader (so classes load automatically), sets up error handling and logging, starts a secure session, and sends security headers (including the Content-Security-Policy that allows the jsDelivr CDN).</div>
+            <div>Dependencies</div><div><code>config/config.php</code>, <code>app/Core/helpers.php</code>, <code>ActivityLog</code></div>
+            <div>Key parts</div><div>Autoloader · session cookie settings · <code>Content-Security-Policy</code> header · global exception handler.</div>
+          </div>
+          <p><b>If you modify it:</b> You can change session length, error display, or which external domains are allowed (CSP). A wrong CSP can block CDN scripts (video/PPT/diagrams).</p>
+          <p><b>If you delete it:</b> The whole app fails to start.</p>
+          <p><b>When to edit:</b> To allow a new CDN, change session timeout, or adjust security headers.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/routes.php <span class="tag">address book</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Location</div><div><code>app/routes.php</code></div>
+            <div>Purpose</div><div>Maps every URL to the code that handles it, and lists which “security gates” (middleware) run first. Example: <code>GET /dashboard → DashboardController::index</code> behind <code>RequireAuth</code>.</div>
+            <div>Dependencies</div><div>All Controllers, the Middleware classes, the <code>$router</code> object.</div>
+          </div>
+          <p><b>If you modify it:</b> You add/rename/remove pages and API endpoints.</p>
+          <p><b>If you delete it:</b> No URLs work — the app shows only 404s.</p>
+          <p><b>When to edit:</b> <span style="color:var(--green)">Whenever you add a new page or endpoint.</span> This is one of the most commonly edited files for new features.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>config/config.php <span class="tag">settings</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Location</div><div><code>config/config.php</code></div>
+            <div>Purpose</div><div>Reads the <code>.env</code> file and returns one big settings array (database details, storage path, upload limit, media tool paths, session/token lengths, allowed file types, video quality “renditions”, section names).</div>
+            <div>Dependencies</div><div><code>.env</code></div>
+            <div>Functions</div><div><code>env()</code> — read one setting with a default.</div>
+          </div>
+          <p><b>If you modify it:</b> Change allowed file types, upload size, video qualities, or defaults.</p>
+          <p><b>If you delete it:</b> The app can't read any settings → fails to start.</p>
+          <p><b>When to edit:</b> To allow a new file type, add a video quality, or change a default.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>.env <span class="tag">secrets</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Location</div><div>project root <code>.env</code></div>
+            <div>Purpose</div><div>Holds environment-specific secrets and paths: database host/name/user/password, app URL, storage path, tool paths, feature flags.</div>
+          </div>
+          <div class="cal danger"><div class="t">🔴 Never share or commit</div>This file contains the database password. It must never be public or stored in Git.</div>
+          <p><b>If you modify it:</b> Point at a different database, change the site URL, toggle watermark/anti-inspect.</p>
+          <p><b>If you delete it:</b> The app falls back to defaults and almost certainly can't reach the database.</p>
+          <p><b>When to edit:</b> When deploying to a new server, or rotating the DB password.</p>
+          <div class="cal warn"><div class="t">🟠 Known gotcha</div>Make sure <code>DB_PORT</code> is the database port (usually <code>3306</code>), not <code>80</code>.</div>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>.htaccess (root) &amp; public/.htaccess <span class="tag">routing + security</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Location</div><div>root <code>.htaccess</code> and <code>public/.htaccess</code></div>
+            <div>Purpose</div><div>Apache rules. The root one forwards all traffic into <code>public/</code>. The public one sends every request to <code>index.php</code> (unless a real file exists) and adds security headers; <code>Options -Indexes</code> stops folder listings.</div>
+          </div>
+          <p><b>If you modify it:</b> Change routing or headers (Apache only).</p>
+          <p><b>If you delete it:</b> URLs break and/or private folders may become browsable. Nginx hosts use server config instead (see README).</p>
+          <p><b>When to edit:</b> Rarely — only for server-level routing/header tweaks.</p>
+        </div>
+      </details>
+
+      <h3>4.2 — Core building blocks (<code>app/Core/</code>)</h3>
+
+      <details class="box filecard"><summary>app/Core/Database.php <span class="tag">DB connection</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>A single, shared connection to the database using PDO (PHP's safe database layer). Provides helpers that use “prepared statements” to prevent hacking via SQL injection.</div>
+            <div>Functions</div><div><code>pdo()</code> connect · <code>all()</code> many rows · <code>first()</code> one row · <code>scalar()</code> one value · <code>execute()</code> insert/update/delete · <code>lastId()</code> new row's ID.</div>
+          </div>
+          <p><b>If you modify it:</b> Change connection options. Risky — touches all data access.</p>
+          <p><b>If you delete it:</b> Nothing can read/write data; app crashes.</p>
+          <p><b>When to edit:</b> Almost never. Use its helpers from Models instead.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/Auth.php <span class="tag">login &amp; permissions</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Everything about “who is logged in and what may they do”. Verifies passwords, regenerates the session for safety, records logins, and answers permission questions.</div>
+            <div>Functions</div><div><code>attempt()</code> log in · <code>logout()</code> · <code>check()</code> logged in? · <code>user()</code>/<code>id()</code> · <code>isSuperAdmin()</code> · <code>flag()</code> read a permission switch · <code>canSection()</code> · <code>allowedSections()</code> · <code>canAccessSections()</code> · <code>canUpload()/canEdit()/canDelete()/canDownload()/canManageUsers()</code>.</div>
+          </div>
+          <p><b>If you modify it:</b> Change how login or permissions work for everyone.</p>
+          <p><b>If you delete it:</b> No logins, no permission checks — total breakage.</p>
+          <p><b>When to edit:</b> To add a new permission rule or change section-access logic. See <a href="#s8">Section 8</a>.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/Router.php <span class="tag">URL matcher</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Matches the requested URL against the routes, runs the listed middleware, and calls the right controller method. Supports parameters like <code>/media/{uuid}</code> and a <code>_method</code> override for forms.</div>
+            <div>Functions</div><div><code>get/post/put/delete/any()</code> register routes · <code>dispatch()</code> run · <code>call()</code> invoke handler.</div>
+          </div>
+          <p><b>If you modify it:</b> Change how routing works globally.</p>
+          <p><b>If you delete it:</b> No request can reach any controller.</p>
+          <p><b>When to edit:</b> Rarely — only to change routing behaviour itself (not to add routes; do that in <code>routes.php</code>).</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/View.php <span class="tag">template engine</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Renders an HTML template file and supports “layouts” (a page frame) with named sections (e.g. extra scripts).</div>
+            <div>Functions</div><div><code>render()</code> · <code>extend()</code> · <code>section()</code>/<code>endSection()</code>.</div>
+          </div>
+          <p><b>If you modify it:</b> Change how all pages are assembled.</p>
+          <p><b>If you delete it:</b> No HTML page can be produced.</p>
+          <p><b>When to edit:</b> Rarely — only to add template features.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/Csrf.php <span class="tag">form safety</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Protects against “CSRF” attacks (a trick where another site submits a form as you). Generates a secret token, prints it as a hidden field, and verifies it on every form submit.</div>
+            <div>Functions</div><div><code>token()</code> · <code>field()</code> hidden input · <code>check()</code> · <code>verifyOrFail()</code> (returns 419 on mismatch).</div>
+          </div>
+          <p><b>If you modify it:</b> Change token handling. Risky.</p>
+          <p><b>If you delete it:</b> Forms become vulnerable; many controllers call it and would error.</p>
+          <p><b>When to edit:</b> Rarely.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/StreamToken.php <span class="tag">video/file passes</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Issues short-lived (15-minute) “tickets” that allow a specific user to stream a specific file. Stored in the database so logging out instantly cancels them.</div>
+            <div>Functions</div><div><code>issue()</code> · <code>validate()</code> · <code>revokeForUser()</code> · <code>purgeExpired()</code>.</div>
+          </div>
+          <p><b>If you modify it:</b> Change how long streaming links last or how they're checked.</p>
+          <p><b>If you delete it:</b> Secure streaming breaks; videos/files won't load.</p>
+          <p><b>When to edit:</b> To change token lifetime or add encryption later.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/ActivityLog.php <span class="tag">audit trail</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Writes a record of meaningful actions (login, view, upload, edit, delete, download) with user, IP, browser and session. Failures are swallowed so logging never breaks a page.</div>
+            <div>Functions</div><div><code>record()</code> · <code>error()</code>.</div>
+          </div>
+          <p><b>If you modify it:</b> Change what/how things are logged.</p>
+          <p><b>If you delete it:</b> Many controllers call it — they'd error; the audit trail disappears.</p>
+          <p><b>When to edit:</b> To log a new kind of action.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>app/Core/helpers.php <span class="tag">small utilities</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Tiny global helper functions used throughout the app.</div>
+            <div>Functions</div><div><code>config()</code> read a setting · <code>e()</code> escape HTML (safety) · <code>url()</code> · <code>asset()</code> (adds <code>?v=</code> cache-busting) · <code>redirect()</code> · <code>old()</code> · <code>flash()</code> one-time messages · <code>storage_path()</code> · <code>slugify()</code> · <code>client_ip()</code> · <code>ua()</code> · <code>format_bytes()</code> · <code>format_duration()</code> · <code>view()</code>.</div>
+          </div>
+          <p><b>If you modify it:</b> Affects formatting/links everywhere.</p>
+          <p><b>If you delete it:</b> The app crashes (these are used constantly).</p>
+          <p><b>When to edit:</b> To add a new small helper used across pages.</p>
+        </div>
+      </details>
+
+      <h4>Middleware — the “security gates” (<code>app/Core/Middleware/</code>)</h4>
+      <details class="box filecard"><summary>RequireAuth.php · RequireAdmin.php · VerifyCsrf.php <span class="tag">gates</span></summary>
+        <div class="body">
+          <p>Middleware runs <i>before</i> a controller. Listed per route in <code>routes.php</code>.</p>
+          <div class="tablewrap"><table>
+            <tr><th>File</th><th>Checks</th><th>If it fails</th></tr>
+            <tr><td><code>RequireAuth.php</code></td><td>Are you logged in?</td><td>Redirects to <code>/login</code>.</td></tr>
+            <tr><td><code>RequireAdmin.php</code></td><td>Logged in AND super-admin/can-manage-users?</td><td>Shows “Forbidden” (403).</td></tr>
+            <tr><td><code>VerifyCsrf.php</code></td><td>Valid form token?</td><td>Returns 419 (token mismatch).</td></tr>
+          </table></div>
+          <p><b>When to edit:</b> To create a new kind of access gate (e.g., “RequireUploader”).</p>
+        </div>
+      </details>
+
+      <h3>4.3 — Controllers (<code>app/Controllers/</code>)</h3>
+      <p>Controllers receive a request, use Models/Services to do the work, and return a View or JSON.</p>
+
+      <details class="box filecard"><summary>AuthController.php <span class="tag">login/logout</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>showLogin()</code> show the form · <code>login()</code> verify + throttle (5 fails/15 min per IP) · <code>logout()</code> end session and cancel stream tokens.</div>
+          <div>Tables used</div><div><code>users</code>, <code>failed_logins</code>, <code>user_sessions</code>, <code>stream_tokens</code>, <code>activity_logs</code></div></div>
+          <p><b>When to edit:</b> Change login rules, throttle limits, or add “forgot password”.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>DashboardController.php <span class="tag">main browser</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>index()</code> read filters from the URL, ask <code>Media::search()</code>, build the sidebar category trees, render the grid.</div>
+          <div>Tables used</div><div><code>media</code>, <code>sections</code>, <code>categories</code>, <code>occasions</code>, <code>companies</code></div></div>
+          <p><b>When to edit:</b> Add a new filter, change default sort or page size.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>MediaController.php <span class="tag">view/edit/delete one item</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>show()</code> the viewer page (logs the view, issues a stream token) · <code>edit()</code>/<code>update()</code> metadata + categories · <code>destroy()</code> delete (removes files too) · <code>isDownloadable()</code> permission check.</div>
+          <div>Tables used</div><div><code>media</code>, <code>media_categories</code>, <code>view_logs</code>, <code>user_sessions</code>, <code>media_download_grants</code></div></div>
+          <p><b>When to edit:</b> Change what the viewer page shows, or edit/delete behaviour.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>UploadController.php <span class="tag">uploads</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>showForm()</code> · <code>store()</code> the big one: validates file/type/CSRF/permission, detects duplicates by SHA-256 hash, saves the file, makes previews, inserts the DB row, attaches categories (with all parent categories). Plus helpers <code>processMedia()</code>, <code>detectMime()</code>, <code>extFor()</code>, <code>uuidv4()</code>, <code>iniBytes()</code>, <code>uploadErrorMessage()</code>, <code>jsonOk()</code>, <code>jsonError()</code>.</div>
+          <div>Tables used</div><div><code>media</code>, <code>media_categories</code>, <code>categories</code>, <code>sections</code>, <code>companies</code></div></div>
+          <p><b>When to edit:</b> Change upload validation, supported types, or preview generation. See <a href="#s12">Section 12</a>.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>StreamController.php <span class="tag">secure file serving</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>stream()</code> original file (supports video seeking) · <code>hls()</code> streaming playlists/segments (rewrites links to keep the token) · <code>thumb()</code> · <code>preview()</code> · <code>download()</code> (permission-gated, fully logged) · private <code>authorize()</code> and <code>serveFile()</code>.</div>
+          <div>Tables used</div><div><code>media</code>, <code>sections</code>, <code>stream_tokens</code>, <code>download_logs</code>, <code>media_download_grants</code></div></div>
+          <p><b>When to edit:</b> Change how files are delivered or download rules.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>SearchController.php <span class="tag">autocomplete</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>suggest()</code> returns JSON suggestions for the top search box (media titles, categories, companies), respecting section permissions.</div></div>
+          <p><b>When to edit:</b> Change what the search box suggests.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>AdminController.php <span class="tag">admin panel</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>dashboard()</code> stats + live sessions · <code>users()/userStore()/userUpdate()/userDelete()</code> · <code>categories()/categoryStore()/categoryDelete()</code> · <code>companies()/companyStore()/companyDelete()</code> · <code>activity()</code> last 200 events.</div>
+          <div>Tables used</div><div><code>users</code>, <code>roles</code>, <code>categories</code>, <code>companies</code>, <code>activity_logs</code>, <code>user_sessions</code>, <code>media</code>, <code>download_logs</code>, <code>view_logs</code></div></div>
+          <p><b>When to edit:</b> Add admin screens or change management actions.</p>
+        </div>
+      </details>
+
+      <h3>4.4 — Models (<code>app/Models/</code>)</h3>
+      <p>Each Model is the “expert” for one part of the database.</p>
+      <div class="tablewrap"><table>
+        <tr><th>File</th><th>Responsible for</th><th>Notable functions</th></tr>
+        <tr><td><code>User.php</code></td><td>users + roles</td><td><code>all, find, roles, create, update, delete</code> (delete = deactivate)</td></tr>
+        <tr><td><code>Media.php</code></td><td>the media library (the biggest model)</td><td><code>create, findByUuid, search, suggest, attachCategories, sectionCodesFor, statsOverview, bumpView/Download</code></td></tr>
+        <tr><td><code>Category.php</code></td><td>nested categories</td><td><code>bySection, tree, descendantIds, ancestorIds, create, delete</code></td></tr>
+        <tr><td><code>Company.php</code></td><td>companies</td><td><code>all, find, create, update, delete</code></td></tr>
+        <tr><td><code>Occasion.php</code></td><td>themes (Diwali, World Heart Day…)</td><td><code>groupedAll, all, find</code></td></tr>
+        <tr><td><code>Section.php</code></td><td>Graphics / Events</td><td><code>all, findByCode, find</code></td></tr>
+        <tr><td><code>Tag.php</code></td><td>free-form tags</td><td><code>findOrCreateMany, popular</code></td></tr>
+      </table></div>
+      <p><b>When to edit a Model:</b> When you need a new database question answered (e.g., “list media uploaded last week”). Add a function here rather than writing SQL inside a controller.</p>
+      <div class="cal danger"><div class="t">🔴 Deleting a Model</div>Deleting any Model breaks every controller/view that uses it. For example, deleting <code>Media.php</code> breaks the dashboard, viewer, upload, search and admin stats.</div>
+
+      <h3>4.5 — Services (<code>app/Services/</code>)</h3>
+      <details class="box filecard"><summary>MediaProcessor.php <span class="tag">media worker</span></summary>
+        <div class="body">
+          <div class="kv"><div>Purpose</div><div>Wraps the external tools (FFmpeg/ImageMagick/LibreOffice) to make thumbnails, video durations, multi-quality HLS bundles, PDF previews, and PPT→PDF conversions. Every method “degrades gracefully” — if a tool is missing it returns nothing instead of crashing.</div>
+          <div>Functions</div><div><code>classify, isVideo/Image/Pdf/Ppt, videoThumbnail, videoDuration, transcodeHls, pdfPreview, pptToPdfAndThumbnail, imageThumbnail, binExists</code>.</div></div>
+          <p><b>When to edit:</b> Change thumbnail sizes, video qualities, or how PPT/PDF previews are made.</p>
+        </div>
+      </details>
+
+      <h3>4.6 — Views (templates)</h3>
+      <p>Views are HTML files with little bits of PHP. Files starting with an underscore (e.g. <code>_sidebar.php</code>) are “partials” — reusable pieces included by other views.</p>
+      <div class="tablewrap"><table>
+        <tr><th>File</th><th>What it renders</th><th>Edit it when…</th></tr>
+        <tr><td><code>layouts/app.php</code></td><td>The main page frame: top bar, search, user menu, theme toggle, where page content + scripts go.</td><td>changing global header/footer/scripts.</td></tr>
+        <tr><td><code>layouts/auth.php</code></td><td>The slim frame for the login page.</td><td>restyling the login screen frame.</td></tr>
+        <tr><td><code>auth/login.php</code></td><td>The login form.</td><td>changing login fields/copy.</td></tr>
+        <tr><td><code>dashboard/index.php</code></td><td>The filter bar + media grid + pagination + the “Categories” mobile button.</td><td>changing the main browsing page.</td></tr>
+        <tr><td><code>dashboard/_sidebar.php</code></td><td>The category tree drawer (also the mobile hamburger drawer).</td><td>changing category navigation.</td></tr>
+        <tr><td><code>dashboard/_card.php</code></td><td>One media “card” in the grid (thumbnail + title + hover preview).</td><td>changing how cards look.</td></tr>
+        <tr><td><code>media/show.php</code></td><td>The single-item viewer: video player / PDF iframe / PPT viewer / image, plus details and watermark.</td><td>changing the viewer.</td></tr>
+        <tr><td><code>media/edit.php</code></td><td>The edit form (title, description, categories, settings).</td><td>changing editable fields.</td></tr>
+        <tr><td><code>upload/form.php</code></td><td>The upload page (dropzone, thumbnail, category picker, “Back to Dashboard”).</td><td>changing the upload UI.</td></tr>
+        <tr><td><code>admin/_nav.php</code></td><td>The admin side menu (also the mobile hamburger drawer for admin).</td><td>adding an admin menu item.</td></tr>
+        <tr><td><code>admin/dashboard.php</code></td><td>Admin overview: stats, recent activity, who's online.</td><td>changing admin stats.</td></tr>
+        <tr><td><code>admin/users.php</code></td><td>User list + create/edit forms with permission checkboxes.</td><td>changing user management UI.</td></tr>
+        <tr><td><code>admin/categories.php</code></td><td>Category management (add/delete nested categories).</td><td>changing category admin.</td></tr>
+        <tr><td><code>admin/companies.php</code></td><td>Company management.</td><td>changing company admin.</td></tr>
+        <tr><td><code>admin/activity.php</code></td><td>The audit log table (last 200 events).</td><td>changing the log view.</td></tr>
+        <tr><td><code>errors/403.php</code></td><td>“Forbidden” page.</td><td>restyling the 403.</td></tr>
+        <tr><td><code>errors/404.php</code></td><td>“Not found” page.</td><td>restyling the 404.</td></tr>
+      </table></div>
+
+      <h3>4.7 — Front-end assets (<code>public/assets/</code>)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>File</th><th>Purpose</th><th>Edit it when…</th></tr>
+        <tr><td><code>css/app.css</code></td><td>ALL styling for the entire app (colours, layout, drawers, viewer, tables, responsive rules).</td><td>changing any look/spacing/colour, or mobile behaviour.</td></tr>
+        <tr><td><code>js/app.js</code></td><td>Theme toggle, popovers, category-tree expand/collapse, the shared mobile drawer system, video-card hover preview.</td><td>changing global UI behaviour or the hamburger drawers.</td></tr>
+        <tr><td><code>js/upload.js</code></td><td>Drag-drop upload, progress bar, category selection + count badges (works on Upload and Edit pages).</td><td>changing upload UX or category counters.</td></tr>
+        <tr><td><code>js/player.js</code></td><td>Video player: HLS.js setup + the three-dot settings menu (Quality + Playback speed).</td><td>changing the player or quality menu.</td></tr>
+        <tr><td><code>js/ppt-viewer.js</code></td><td>Renders PowerPoint in the browser via PPTXjs when no PDF preview exists.</td><td>changing PPT viewing.</td></tr>
+        <tr><td><code>js/search-suggest.js</code></td><td>The top search box autocomplete dropdown.</td><td>changing search suggestions UI.</td></tr>
+        <tr><td><code>js/watermark.js</code></td><td>Paints the moving “name · email · time” watermark over media.</td><td>changing watermark look/behaviour.</td></tr>
+        <tr><td><code>js/security.js</code></td><td>Anti-copy deterrents: blocks right-click/drag on media, dev-tool shortcuts, blurs media when tab loses focus.</td><td>adjusting protection deterrents.</td></tr>
+      </table></div>
+
+      <h3>4.8 — Database scripts (<code>database/</code>)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>File</th><th>Purpose</th></tr>
+        <tr><td><code>schema.sql</code></td><td>Creates every table, index and relationship. Run once on a fresh database.</td></tr>
+        <tr><td><code>seed.sql</code></td><td>Inserts starter data: 4 roles, permissions, the default super admin, both sections, the full category trees and ~67 occasions.</td></tr>
+        <tr><td><code>migrations/…hybrid_subcategories.sql</code></td><td>Adds occasion-based subcategories under “Hybrid”.</td></tr>
+        <tr><td><code>migrations/…backfill_media_category_ancestors.sql</code></td><td>Back-fills older media so parent categories are attached (so filters work).</td></tr>
+        <tr><td><code>migrations/…companies.sql</code></td><td>Adds the <code>companies</code> table and links media to a company.</td></tr>
+      </table></div>
+      <div class="cal warn"><div class="t">🟠 Important</div>The <code>companies</code> table lives in a <i>migration</i>, not in <code>schema.sql</code>. On a brand-new database, run <code>schema.sql</code>, then <code>seed.sql</code>, then all migration files in date order.</div>
+    </section>
+
+
+    <!-- ===================================================== SECTION 5 -->
+    <section class="section" id="s5">
+      <h2><span class="num">5</span> Frontend Architecture</h2>
+      <p class="lead">“Frontend” = what runs in the browser. In this project the HTML is built by PHP on the server, then the browser
+      adds interactivity with plain JavaScript. There is no React/Vue, so the pieces below are simpler than in many apps.</p>
+
+      <h3>The pieces, in plain terms</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Concept</th><th>Here it means…</th><th>Where</th></tr>
+        <tr><td><b>Pages</b></td><td>Full screens a user visits (Dashboard, Viewer, Upload, Admin…).</td><td>Views in <code>app/Views/</code></td></tr>
+        <tr><td><b>Layouts</b></td><td>The reusable “frame” around pages (top bar, menus).</td><td><code>layouts/app.php</code>, <code>layouts/auth.php</code></td></tr>
+        <tr><td><b>Components / Reusable components</b></td><td>Small repeated pieces. Here they are “partials”: the media card, the sidebar, the admin nav.</td><td><code>_card.php</code>, <code>_sidebar.php</code>, <code>_nav.php</code></td></tr>
+        <tr><td><b>Hooks</b></td><td>(A React idea.) This project has none — interactivity is plain JS event listeners instead.</td><td>—</td></tr>
+        <tr><td><b>Utilities</b></td><td>Small reusable JS helpers (e.g. escape text, format bytes).</td><td>inside each JS file</td></tr>
+        <tr><td><b>Services (frontend)</b></td><td>JS that talks to the server (e.g. the upload XHR, the search fetch).</td><td><code>upload.js</code>, <code>search-suggest.js</code></td></tr>
+      </table></div>
+
+      <h3>How they connect</h3>
+      <div class="mermaid">
+flowchart TD
+  A["Browser asks for a page"] --> B["layouts/app.php (the frame)"]
+  B --> C["Page view e.g. dashboard/index.php"]
+  C --> D["Partials: _sidebar.php, _card.php"]
+  B --> E["app.css (styling)"]
+  B --> F["app.js + security.js + search-suggest.js"]
+  C -. "viewer page" .-> G["player.js / ppt-viewer.js / watermark.js"]
+  C -. "upload page" .-> H["upload.js"]
+      </div>
+
+      <div class="cal tip"><div class="t">🟢 Rule of thumb</div>
+      Change <b>structure/content</b> → edit a View (<code>.php</code>). Change <b>look</b> → edit <code>app.css</code>.
+      Change <b>behaviour/clicks</b> → edit the matching <code>.js</code> file.</div>
+
+      <h3>How scripts are loaded</h3>
+      <p>The global scripts (<code>app.js</code>, <code>search-suggest.js</code>, <code>security.js</code>) load on every page via
+      <code>layouts/app.php</code>. Page-specific scripts load only where needed using the layout's “scripts” section — e.g.
+      <code>media/show.php</code> loads <code>player.js</code> for videos or <code>ppt-viewer.js</code> for PowerPoints.</p>
+    </section>
+
+    <!-- ===================================================== SECTION 6 -->
+    <section class="section" id="s6">
+      <h2><span class="num">6</span> Backend Architecture</h2>
+      <p class="lead">The backend follows a clean, classic pattern called <b>MVC</b> (Model–View–Controller), built by hand.</p>
+
+      <div class="tablewrap"><table>
+        <tr><th>Layer</th><th>Job (analogy: a restaurant)</th><th>Folder</th></tr>
+        <tr><td><b>Router</b></td><td>The host who reads the request and sends it to the right waiter.</td><td><code>Core/Router.php</code> + <code>routes.php</code></td></tr>
+        <tr><td><b>Middleware</b></td><td>The bouncer at the door (are you allowed in?).</td><td><code>Core/Middleware/</code></td></tr>
+        <tr><td><b>Controller</b></td><td>The waiter who takes your order and coordinates.</td><td><code>Controllers/</code></td></tr>
+        <tr><td><b>Service</b></td><td>The chef doing heavy work (media processing).</td><td><code>Services/</code></td></tr>
+        <tr><td><b>Model</b></td><td>The pantry manager who fetches/stores ingredients (data).</td><td><code>Models/</code></td></tr>
+        <tr><td><b>View</b></td><td>The plated dish handed back to you (HTML).</td><td><code>Views/</code></td></tr>
+      </table></div>
+
+      <h3>How a normal page request flows</h3>
+      <div class="mermaid">
+sequenceDiagram
+  participant U as Browser
+  participant S as Web server (Apache)
+  participant I as public/index.php
+  participant R as Router
+  participant M as Middleware (RequireAuth)
+  participant C as Controller
+  participant Mo as Model
+  participant DB as Database
+  participant V as View (HTML)
+  U->>S: GET /dashboard
+  S->>I: forward request
+  I->>R: dispatch()
+  R->>M: run security gate
+  M-->>R: OK (logged in)
+  R->>C: DashboardController.index()
+  C->>Mo: Media::search(filters)
+  Mo->>DB: SELECT ... 
+  DB-->>Mo: rows
+  Mo-->>C: media list
+  C->>V: render dashboard
+  V-->>U: HTML page
+      </div>
+
+      <h3>API structure</h3>
+      <p>Most “endpoints” return HTML pages. A few return <b>JSON</b> (data instead of a page) for JavaScript to use:</p>
+      <div class="tablewrap"><table>
+        <tr><th>URL</th><th>Returns</th><th>Used by</th></tr>
+        <tr><td><code>GET /search/suggest?q=…</code></td><td>JSON suggestions</td><td><code>search-suggest.js</code></td></tr>
+        <tr><td><code>POST /upload</code></td><td>JSON success/error</td><td><code>upload.js</code></td></tr>
+        <tr><td><code>GET /stream/{uuid}?token=…</code></td><td>The file bytes (video/image/etc.)</td><td>the video/PPT players</td></tr>
+        <tr><td><code>GET /thumb/{uuid}</code> · <code>/preview/{uuid}</code></td><td>image/PDF bytes</td><td>cards &amp; viewers</td></tr>
+        <tr><td><code>GET /download/{uuid}</code></td><td>file download (if permitted)</td><td>download button</td></tr>
+      </table></div>
+
+      <h3>Database interactions</h3>
+      <p>Controllers never write raw SQL. They call Models, which use <code>Database</code>'s safe helpers with “prepared statements”
+      (values are sent separately from the query, which blocks SQL-injection attacks). This keeps data access in one place and secure.</p>
+    </section>
+
+    <!-- ===================================================== SECTION 7 -->
+    <section class="section" id="s7">
+      <h2><span class="num">7</span> Database Documentation</h2>
+      <p class="lead">The database is a set of connected tables. A “table” is like a spreadsheet; a “row” is one record; a “column” is one field.
+      Tables connect via IDs (a “foreign key” is simply a column that points at a row in another table).</p>
+
+      <h3>Entity-Relationship (ER) diagram</h3>
+      <div class="mermaid">
+erDiagram
+  ROLES ||--o{ USERS : "has"
+  USERS ||--o{ MEDIA : "uploads"
+  SECTIONS ||--o{ CATEGORIES : "contains"
+  SECTIONS ||--o{ MEDIA : "primary section"
+  CATEGORIES ||--o{ CATEGORIES : "parent of"
+  COMPANIES ||--o{ MEDIA : "owns"
+  MEDIA ||--o{ MEDIA_CATEGORIES : ""
+  CATEGORIES ||--o{ MEDIA_CATEGORIES : ""
+  MEDIA ||--o{ MEDIA_OCCASIONS : ""
+  OCCASIONS ||--o{ MEDIA_OCCASIONS : ""
+  OCCASION_GROUPS ||--o{ OCCASIONS : "groups"
+  MEDIA ||--o{ MEDIA_TAGS : ""
+  TAGS ||--o{ MEDIA_TAGS : ""
+  USERS ||--o{ ACTIVITY_LOGS : "acts"
+  MEDIA ||--o{ VIEW_LOGS : "viewed"
+  MEDIA ||--o{ DOWNLOAD_LOGS : "downloaded"
+  USERS ||--o{ USER_SESSIONS : "has"
+  USERS ||--o{ STREAM_TOKENS : "holds"
+  MEDIA ||--o{ STREAM_TOKENS : "for"
+      </div>
+
+      <h3>Key tables explained</h3>
+
+      <details class="box" open><summary>users — the people who can log in</summary><div class="body">
+        <div class="tablewrap"><table>
+          <tr><th>Column</th><th>Meaning</th></tr>
+          <tr><td><code>id</code></td><td>Unique number for each user.</td></tr>
+          <tr><td><code>name, email</code></td><td>Display name and login email (email is unique).</td></tr>
+          <tr><td><code>password_hash</code></td><td>The password stored <i>scrambled</i> (bcrypt) — never in plain text.</td></tr>
+          <tr><td><code>role_id</code></td><td>Points to a row in <code>roles</code>.</td></tr>
+          <tr><td><code>can_graphics, can_events</code></td><td>Section access switches.</td></tr>
+          <tr><td><code>can_upload, can_edit, can_delete, can_download, can_manage_users</code></td><td>Individual permission switches (1/0).</td></tr>
+          <tr><td><code>is_active</code></td><td>0 = deactivated (can't log in).</td></tr>
+          <tr><td><code>last_login_at, last_login_ip, created_at, updated_at</code></td><td>Bookkeeping.</td></tr>
+        </table></div>
+        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", email: "admin@greyshades.local", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
+      </div></details>
+
+      <details class="box"><summary>roles &amp; permissions — what each role means</summary><div class="body">
+        <p><code>roles</code> = super_admin, graphics_user, events_user, combined_user. <code>permissions</code> = a list of capability codes
+        (e.g. <code>media.view</code>, <code>media.upload</code>). <code>role_permissions</code> links them. In practice the app checks the per-user
+        <code>can_*</code> switches and the role code, more than the permissions table (which documents intent).</p>
+      </div></details>
+
+      <details class="box"><summary>sections &amp; categories — how media is organised</summary><div class="body">
+        <p><code>sections</code> has two rows: <code>graphics</code> and <code>events</code>. <code>categories</code> are nested via a
+        <code>parent_id</code> that points back to another category in the same table (so a category can have sub-categories, to any depth).</p>
+        <div class="tablewrap"><table>
+          <tr><th>categories column</th><th>Meaning</th></tr>
+          <tr><td><code>id</code></td><td>Unique number.</td></tr>
+          <tr><td><code>section_id</code></td><td>Which section it belongs to.</td></tr>
+          <tr><td><code>parent_id</code></td><td>The category above it (empty = top level).</td></tr>
+          <tr><td><code>name, slug, sort_order</code></td><td>Label, URL-friendly name, display order.</td></tr>
+        </table></div>
+        <p><b>Example:</b> “Invitation Videos” has a <code>parent_id</code> of “Videos”, which has a <code>parent_id</code> of “Art”.</p>
+      </div></details>
+
+      <details class="box"><summary>media — the heart of the system</summary><div class="body">
+        <p>One row per <b>physical file</b> (never duplicated). The file's real path is here but never exposed publicly.</p>
+        <div class="tablewrap"><table>
+          <tr><th>Column</th><th>Meaning</th></tr>
+          <tr><td><code>uuid</code></td><td>The only public identifier (a random code in URLs).</td></tr>
+          <tr><td><code>file_hash</code></td><td>SHA-256 fingerprint — used to detect duplicates.</td></tr>
+          <tr><td><code>section_id, company_id</code></td><td>Primary section and (optional) owning company.</td></tr>
+          <tr><td><code>title, description, keywords</code></td><td>Searchable text.</td></tr>
+          <tr><td><code>media_type, mime_type</code></td><td>video/image/pdf/ppt + exact format.</td></tr>
+          <tr><td><code>file_path, file_size</code></td><td>Where it lives in private storage; how big.</td></tr>
+          <tr><td><code>thumbnail_path, preview_path, hls_master</code></td><td>Generated preview locations.</td></tr>
+          <tr><td><code>is_downloadable, download_expiry, is_featured, is_pinned</code></td><td>Behaviour switches.</td></tr>
+          <tr><td><code>view_count, download_count</code></td><td>Popularity counters.</td></tr>
+          <tr><td><code>uploaded_by, created_at</code></td><td>Who/when.</td></tr>
+        </table></div>
+      </div></details>
+
+      <details class="box"><summary>Junction tables — “many-to-many” links</summary><div class="body">
+        <p>A junction table connects two things so one file can belong to many categories (and a category can have many files), without copying anything.</p>
+        <div class="tablewrap"><table>
+          <tr><th>Table</th><th>Links</th></tr>
+          <tr><td><code>media_categories</code></td><td>media ↔ categories</td></tr>
+          <tr><td><code>media_occasions</code></td><td>media ↔ occasions</td></tr>
+          <tr><td><code>media_tags</code></td><td>media ↔ tags</td></tr>
+          <tr><td><code>media_download_grants</code></td><td>per-file download permission for specific users</td></tr>
+        </table></div>
+      </div></details>
+
+      <details class="box"><summary>companies, occasions, occasion_groups, tags</summary><div class="body">
+        <p><code>companies</code> = client brands a file can belong to. <code>occasions</code> = themes (Diwali, World Heart Day) grouped by
+        <code>occasion_groups</code> (medical / national / environment). <code>tags</code> = free-form labels.</p>
+      </div></details>
+
+      <details class="box"><summary>Logs &amp; sessions — accountability</summary><div class="body">
+        <div class="tablewrap"><table>
+          <tr><th>Table</th><th>Purpose</th></tr>
+          <tr><td><code>activity_logs</code></td><td>Every meaningful action (login, view, upload, edit, delete, download) with user, IP, browser, session.</td></tr>
+          <tr><td><code>view_logs</code></td><td>Each media view (for analytics).</td></tr>
+          <tr><td><code>download_logs</code></td><td>Each download with bytes sent.</td></tr>
+          <tr><td><code>user_sessions</code></td><td>Who is online and what they're currently viewing.</td></tr>
+          <tr><td><code>stream_tokens</code></td><td>Active streaming tickets (cancelled on logout).</td></tr>
+          <tr><td><code>failed_logins</code></td><td>Wrong-password attempts (for throttling).</td></tr>
+        </table></div>
+      </div></details>
+    </section>
+
+    <!-- ===================================================== SECTION 8 -->
+    <section class="section" id="s8">
+      <h2><span class="num">8</span> Authentication &amp; Authorization</h2>
+      <p class="lead"><b>Authentication</b> = “proving who you are” (login). <b>Authorization</b> = “what you're allowed to do” (permissions).</p>
+
+      <h3>Login flow (step by step)</h3>
+      <div class="mermaid">
+sequenceDiagram
+  participant U as User
+  participant A as AuthController.login()
+  participant DB as Database
+  U->>A: submit email + password
+  A->>A: CSRF check + email format
+  A->>DB: count recent failed_logins for this IP
+  alt 5+ fails in 15 min
+    A-->>U: "Too many attempts" (blocked)
+  else allowed
+    A->>DB: find active user by email
+    A->>A: password_verify(password, stored hash)
+    alt wrong
+      A->>DB: insert failed_logins row
+      A-->>U: "Invalid credentials"
+    else correct
+      A->>A: session_regenerate_id() (anti-fixation)
+      A->>DB: update last_login + user_sessions
+      A->>DB: activity_logs "login"
+      A-->>U: redirect to /dashboard
+    end
+  end
+      </div>
+
+      <h3>Session flow (staying logged in)</h3>
+      <ul class="clean">
+        <li>On success, the server stores your user details in a server-side <b>session</b> and sets a cookie named <code>GREYSHADES_SID</code> in your browser.</li>
+        <li>The cookie is <b>HttpOnly</b> (JavaScript can't read it), <b>SameSite=Lax</b>, and <b>Secure</b> over HTTPS — these make it hard to steal.</li>
+        <li>On each protected page, <code>RequireAuth</code> confirms the session exists and refreshes your “last active” time.</li>
+        <li>Logging out empties the session, deletes the cookie, and cancels all your streaming tickets.</li>
+      </ul>
+      <div class="cal note"><div class="t">🔵 No JWT</div>This app deliberately uses classic server sessions, <b>not</b> JWT tokens, so an admin can instantly revoke access.</div>
+
+      <h3>Roles &amp; the permission model</h3>
+      <p>Two layers decide access: the <b>role</b> (a floor) and per-user <b>switches</b> (fine control). Super Admin overrides everything.</p>
+      <div class="tablewrap"><table>
+        <tr><th>Role</th><th>Sees Graphics</th><th>Sees Events</th><th>Default extra powers</th></tr>
+        <tr><td>super_admin</td><td>✅</td><td>✅</td><td>All (upload/edit/delete/download/manage users)</td></tr>
+        <tr><td>graphics_user</td><td>✅ (if <code>can_graphics</code>)</td><td>—</td><td>View only by default</td></tr>
+        <tr><td>events_user</td><td>—</td><td>✅ (if <code>can_events</code>)</td><td>View only by default</td></tr>
+        <tr><td>combined_user</td><td>✅</td><td>✅</td><td>View only by default</td></tr>
+      </table></div>
+
+      <h3>Exactly how a permission is checked</h3>
+      <p>In code, checks read the logged-in user's switches. Examples from <code>Auth.php</code>:</p>
+<pre><code>// Can this user use a section? Super admin always can.
+canSection('events')  →  isSuperAdmin()  ||  user['can_events'] == 1
+
+// Can they upload?
+canUpload()  →  isSuperAdmin()  ||  user['can_upload'] == 1
+
+// Can they SEE a specific media item?
+// They can if ANY section the item touches is allowed to them.
+canAccessSections( Media::sectionCodesFor(item) )</code></pre>
+      <div class="cal tip"><div class="t">🟢 Why <code>sectionCodesFor</code> matters</div>
+      A file's section is decided by its categories. Because a file can be filed under both Graphics and Events categories,
+      visibility is based on <i>every</i> section it touches — so an Events user can see a file that is (also) in an Events category,
+      even if its “primary” section is Graphics. This was a deliberate fix.</div>
+
+      <h3>Where to change permission behaviour</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Want to…</th><th>Edit…</th></tr>
+        <tr><td>Add a new permission switch</td><td><code>users</code> table (column) → <code>User.php</code> (create/update) → <code>admin/users.php</code> (checkbox) → <code>Auth.php</code> (a <code>canX()</code> method)</td></tr>
+        <tr><td>Change who can open the admin panel</td><td><code>Core/Middleware/RequireAdmin.php</code></td></tr>
+        <tr><td>Change section visibility rules</td><td><code>Auth.php</code> + <code>Media::search()/sectionCodesFor()</code></td></tr>
+        <tr><td>Change login throttling</td><td><code>AuthController::login()</code></td></tr>
+      </table></div>
+    </section>
+
+
+    <!-- ===================================================== SECTION 9 -->
+    <section class="section" id="s9">
+      <h2><span class="num">9</span> Feature Documentation</h2>
+      <p class="lead">Each feature below lists its purpose, the files involved, the database tables, the front-end and back-end flow, common issues, and how to modify it.</p>
+
+      <details class="box" open><summary>Dashboard (media browser)</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Browse/filter/search all media you're allowed to see, in a grid.</div>
+          <div>Files</div><div><code>DashboardController.php</code>, <code>Views/dashboard/index.php</code>, <code>_sidebar.php</code>, <code>_card.php</code>, <code>Models/Media.php</code>, <code>Category.php</code>, <code>app.js</code>, <code>app.css</code></div>
+          <div>Tables</div><div><code>media, sections, categories, occasions, companies</code></div>
+        </div>
+        <p><b>Front-end flow:</b> You pick a filter (dropdown/sidebar) → the form/link reloads <code>/dashboard?…</code> with query parameters.</p>
+        <p><b>Back-end flow:</b> <code>DashboardController::index()</code> reads filters → <code>Media::search()</code> builds a safe SQL query (section visibility + filters + sort + pagination) → renders the grid.</p>
+        <p><b>Common issues:</b> Empty results for Events users (fixed via category-aware visibility); wrong counts (see <a href="#s13">Section 13</a>).</p>
+        <p><b>Modify:</b> Add a filter → add it in <code>index.php</code> form + <code>DashboardController</code> + <code>Media::search()</code>.</p>
+      </div></details>
+
+      <details class="box"><summary>User Management</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Create users, set their role + permission switches, deactivate them.</div>
+          <div>Files</div><div><code>AdminController.php</code>, <code>Views/admin/users.php</code>, <code>Models/User.php</code></div>
+          <div>Tables</div><div><code>users, roles</code></div>
+        </div>
+        <p><b>Flow:</b> Admin submits the form → <code>userStore()/userUpdate()</code> → <code>User::create()/update()</code> (passwords are hashed). “Delete” sets <code>is_active = 0</code> (soft delete) so logs stay intact.</p>
+        <p><b>Common issues:</b> A permission change only takes effect after that user logs in again (their session caches their permissions).</p>
+        <p><b>Modify:</b> Add a permission → see the table in <a href="#s8">Section 8</a>.</p>
+      </div></details>
+
+      <details class="box"><summary>Category Management</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Add/delete nested categories per section.</div>
+          <div>Files</div><div><code>AdminController.php</code>, <code>Views/admin/categories.php</code>, <code>Models/Category.php</code></div>
+          <div>Tables</div><div><code>categories</code></div>
+        </div>
+        <p><b>Flow:</b> <code>categoryStore()</code> creates a category (auto-unique slug); <code>categoryDelete()</code> removes it (children become top-level via the database rule).</p>
+        <p><b>Modify:</b> To change tree depth handling, edit <code>Category::tree()/descendantIds()/ancestorIds()</code>.</p>
+      </div></details>
+
+      <details class="box"><summary>Company Management</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Maintain the list of client companies a file can belong to.</div>
+          <div>Files</div><div><code>AdminController.php</code>, <code>Views/admin/companies.php</code>, <code>Models/Company.php</code></div>
+          <div>Tables</div><div><code>companies</code> (+ <code>media.company_id</code>)</div>
+        </div>
+        <p><b>Modify:</b> Company appears in upload/edit dropdowns and as a dashboard filter automatically.</p>
+      </div></details>
+
+      <details class="box"><summary>Media Upload</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Add new media with a thumbnail and categories; never store the same file twice.</div>
+          <div>Files</div><div><code>UploadController.php</code>, <code>Views/upload/form.php</code>, <code>upload.js</code>, <code>Services/MediaProcessor.php</code>, <code>Models/Media.php</code>, <code>Category.php</code></div>
+          <div>Tables</div><div><code>media, media_categories, categories, sections, companies</code></div>
+        </div>
+        <p><b>Flow:</b> <code>upload.js</code> sends the file via background request (XHR) with a progress bar → <code>store()</code> validates → computes SHA-256 (duplicate check) → saves the original → makes previews → inserts the row → attaches the chosen leaf categories <i>plus all their parents</i>.</p>
+        <p><b>Common issues:</b> “Upload exceeds server limit” → raise <code>post_max_size</code>/<code>upload_max_filesize</code> in PHP; missing thumbnail required for video/ppt/pdf.</p>
+        <p><b>Modify:</b> Allowed types in <code>config.php</code>; validation/preview logic in <code>UploadController</code>/<code>MediaProcessor</code>. See <a href="#s12">Section 12</a>.</p>
+      </div></details>
+
+      <details class="box"><summary>Media Edit</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Change a file's title/description/keywords/company/category/flags.</div>
+          <div>Files</div><div><code>MediaController.php</code> (<code>edit/update</code>), <code>Views/media/edit.php</code>, <code>upload.js</code> (shared category counter), <code>Models/Media.php</code></div>
+          <div>Tables</div><div><code>media, media_categories</code></div>
+        </div>
+        <p><b>Common issue (fixed):</b> Category count showing “0” on the edit page — caused by a cached <code>upload.js</code>; fixed with asset cache-busting + making the script run on the edit form too.</p>
+      </div></details>
+
+      <details class="box"><summary>Video Viewer (with quality selector)</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Play protected video with adaptive quality and playback speed in one clean menu.</div>
+          <div>Files</div><div><code>Views/media/show.php</code>, <code>player.js</code>, <code>StreamController.php</code>, <code>app.css</code></div>
+          <div>Tables</div><div><code>media, stream_tokens, view_logs</code></div>
+        </div>
+        <p><b>Flow:</b> The page gets a 15-min stream token. <code>player.js</code> uses HLS.js to play the multi-quality stream and builds the three-dot settings menu (Quality + Playback speed). The browser's native menu is suppressed so there is only one menu.</p>
+        <p><b>Common issues:</b> No “Quality” option = the server didn't make multiple resolutions (FFmpeg missing) → only single MP4 exists.</p>
+        <p><b>Modify:</b> Qualities in <code>config.php</code> (<code>hls_renditions</code>); menu behaviour in <code>player.js</code>.</p>
+      </div></details>
+
+      <details class="box"><summary>PDF Viewer</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>View PDFs full-size in the page without a download button.</div>
+          <div>Files</div><div><code>Views/media/show.php</code> (an <code>&lt;iframe&gt;</code> with <code>#toolbar=0</code>), <code>StreamController.php</code>, <code>app.css</code></div>
+        </div>
+        <p><b>Flow:</b> The PDF is shown in an iframe; <code>#toolbar=0</code> hides the browser's download/print toolbar (works in Chrome/Edge; Firefox may still show it).</p>
+        <p><b>Modify:</b> Sizing in <code>.pdf-stage</code> (CSS); toolbar params in <code>show.php</code>.</p>
+      </div></details>
+
+      <details class="box"><summary>PPT (PowerPoint) Viewer</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>View presentations inside the page.</div>
+          <div>Files</div><div><code>Views/media/show.php</code>, <code>ppt-viewer.js</code>, <code>MediaProcessor.php</code>, <code>StreamController.php</code></div>
+        </div>
+        <p><b>Flow:</b> If the server converted the PPT to a PDF (LibreOffice), it's shown like a PDF. If not, <code>ppt-viewer.js</code> renders the original <code>.pptx</code> in the browser using PPTXjs (loaded from the CDN). If that fails, a friendly message + download option appears.</p>
+        <p><b>Common issues:</b> Low-fidelity slides via PPTXjs → install LibreOffice on the server for high-quality PDF conversion.</p>
+      </div></details>
+
+      <details class="box"><summary>Activity Logs</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Accountability — see who did what.</div>
+          <div>Files</div><div><code>AdminController::activity()</code>, <code>Views/admin/activity.php</code>, <code>Core/ActivityLog.php</code></div>
+          <div>Tables</div><div><code>activity_logs</code></div>
+        </div>
+        <p><b>Modify:</b> To log a new action, call <code>ActivityLog::record('your.action', …)</code> from the relevant controller.</p>
+      </div></details>
+
+      <details class="box"><summary>Admin Panel</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>Central management area (users, categories, companies, activity, live sessions).</div>
+          <div>Files</div><div><code>AdminController.php</code>, all <code>Views/admin/*</code>, behind <code>RequireAdmin</code></div>
+        </div>
+        <p><b>Flow:</b> Every admin route is gated by <code>RequireAdmin</code> (super admin or “can manage users”).</p>
+      </div></details>
+
+      <details class="box"><summary>Mobile Navigation</summary><div class="body">
+        <div class="kv">
+          <div>Purpose</div><div>On phones, the admin menu and category sidebar become slide-in “hamburger” drawers.</div>
+          <div>Files</div><div><code>app.js</code> (drawer controller), <code>app.css</code> (<code>.drawer</code> styles), <code>admin/_nav.php</code>, <code>dashboard/_sidebar.php</code>, <code>dashboard/index.php</code></div>
+        </div>
+        <p>Full details in <a href="#s11">Section 11</a>.</p>
+      </div></details>
+    </section>
+
+    <!-- ===================================================== SECTION 10 -->
+    <section class="section" id="s10">
+      <h2><span class="num">10</span> UI Component Guide</h2>
+      <p class="lead">This app's “components” are server-rendered partials + CSS classes + JS hooks (there are no React props).
+      Below, “Props” means the HTML <code>data-</code> attributes or PHP variables a piece expects; “Events” means what triggers its JS.</p>
+
+      <details class="box" open><summary>Media Card (<code>_card.php</code>)</summary><div class="body">
+        <div class="kv">
+          <div>Location</div><div><code>Views/dashboard/_card.php</code></div>
+          <div>Purpose</div><div>One tile in the media grid (thumbnail, title, type, hover-to-play for videos).</div>
+          <div>“Props”</div><div>PHP variable <code>$m</code> (a media row). <code>data-preview-src</code> on the card enables hover preview.</div>
+          <div>Events</div><div><code>app.js</code> listens for <code>mouseenter</code>/touch to play a muted preview.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Settings menu (video) (<code>player.js</code> + <code>.gs-settings</code>)</summary><div class="body">
+        <div class="kv">
+          <div>Location</div><div>built by <code>player.js</code>, styled by <code>.gs-settings*</code> in <code>app.css</code></div>
+          <div>Purpose</div><div>One three-dot menu containing Quality + Playback speed submenus.</div>
+          <div>Events</div><div>Click the three-dot to open; click a row to open a submenu; click a value to apply; click outside / Esc to close.</div>
+        </div>
+        <div class="cal note"><div class="t">🔵 Lesson learned</div>In-menu clicks call <code>e.stopPropagation()</code> so they don't bubble to the “close on outside click” handler (an earlier bug closed the menu on every click).</div>
+      </div></details>
+
+      <details class="box"><summary>Drawer (mobile menus) (<code>.drawer</code> + <code>.drawer-overlay</code>)</summary><div class="body">
+        <div class="kv">
+          <div>Location</div><div><code>app.js</code> generic controller; styles in <code>app.css</code></div>
+          <div>“Props”</div><div><code>data-drawer-open="id"</code> on a button opens the drawer with that id; <code>data-drawer-close</code> closes it.</div>
+          <div>Events</div><div>Open via hamburger; close via overlay click, the X, Esc, selecting a link, or resizing to desktop.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Search autocomplete (<code>search-suggest.js</code>)</summary><div class="body">
+        <div class="kv">
+          <div>Location</div><div>top bar in <code>layouts/app.php</code>; logic in <code>search-suggest.js</code></div>
+          <div>Events</div><div>Typing (debounced) fetches <code>/search/suggest</code>; arrow keys navigate; Enter/click selects.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Callout / badge / toast classes (CSS only)</summary><div class="body">
+        <p>Reusable visual classes: <code>.badge</code>, <code>.btn-primary/.btn-ghost/.btn-danger</code>, <code>.toast</code>, <code>.glass</code>, <code>.chip</code>. Use them in any view for consistent styling.</p>
+      </div></details>
+    </section>
+
+    <!-- ===================================================== SECTION 11 -->
+    <section class="section" id="s11">
+      <h2><span class="num">11</span> Mobile Responsive System</h2>
+      <p class="lead">“Responsive” means the layout adapts to screen size. The rules live in <code>public/assets/css/app.css</code> and the drawer logic in <code>public/assets/js/app.js</code>.</p>
+
+      <h3>Breakpoints (screen-size switch points)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Max width</th><th>What changes</th></tr>
+        <tr><td><code>1024px</code></td><td>(This documentation page) sidebar becomes a drawer.</td></tr>
+        <tr><td><code>960px</code></td><td>Main app: dashboard + admin switch to single column; the category &amp; admin menus become hamburger drawers.</td></tr>
+        <tr><td><code>720px</code></td><td>Admin tables shrink slightly; meta column narrows.</td></tr>
+        <tr><td><code>560px</code></td><td>Tighter padding for small phones.</td></tr>
+      </table></div>
+
+      <h3>Hamburger navigation &amp; overlay behaviour</h3>
+      <ul class="clean">
+        <li>On ≤960px a hamburger button appears; the sidebar/nav slides in from the left as a <code>.drawer</code>.</li>
+        <li>A <code>.drawer-overlay</code> dims the page. <b>Key detail:</b> the overlay starts at the drawer's right edge (<code>left: var(--gs-drawer-w)</code>) so it never covers the menu — meaning menu taps can never accidentally hit the overlay and close it.</li>
+        <li>The drawer is a flex column: a fixed header (title + X) on top, a scrollable body below — so content never hides under the header.</li>
+        <li>Body scrolling is locked while open (<code>body.drawer-open</code>).</li>
+      </ul>
+      <div class="mermaid">
+flowchart LR
+  T["Tap hamburger"] --> O["open(): add .open to drawer + .show to overlay + lock body"]
+  O --> I{"User action"}
+  I -->|Tap a link| C["closeAll() + navigate"]
+  I -->|Tap X| C
+  I -->|Tap overlay| C
+  I -->|Press Esc| C
+  I -->|Resize &gt; 960px| C
+      </div>
+
+      <h3>Where to modify mobile behaviour</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Want to…</th><th>Edit…</th></tr>
+        <tr><td>Change when the hamburger appears</td><td>the <code>@media (max-width: 960px)</code> block in <code>app.css</code> (and the resize check in <code>app.js</code>)</td></tr>
+        <tr><td>Change drawer width</td><td><code>--gs-drawer-w</code> in <code>app.css</code></td></tr>
+        <tr><td>Change open/close logic</td><td>the drawer controller IIFE in <code>app.js</code></td></tr>
+        <tr><td>Change the drawer header/title</td><td><code>_nav.php</code> / <code>_sidebar.php</code> (<code>.drawer-head</code>)</td></tr>
+      </table></div>
+    </section>
+
+    <!-- ===================================================== SECTION 12 -->
+    <section class="section" id="s12">
+      <h2><span class="num">12</span> Media Management System</h2>
+      <p class="lead">How a file goes from “dropped on the page” to “safely viewable”.</p>
+
+      <h3>Upload &amp; storage flow</h3>
+      <div class="mermaid">
+flowchart TD
+  A["User drops a file (upload.js)"] --> B["POST /upload (XHR + progress)"]
+  B --> C["UploadController::store()"]
+  C --> D{"Valid? type, size, CSRF, permission, category"}
+  D -->|no| E["JSON error shown on page"]
+  D -->|yes| F["SHA-256 hash"]
+  F --> G{"Already in library?"}
+  G -->|yes| H["Link to existing UUID (no duplicate)"]
+  G -->|no| I["Save original to storage/uploads/originals/YYYY/MM"]
+  I --> J["MediaProcessor makes previews"]
+  J --> K["Insert media row + attach categories (with parents)"]
+  K --> L["Return JSON: success + view link"]
+      </div>
+
+      <h3>Preview generation (per type)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Type</th><th>What's generated</th><th>Tool</th></tr>
+        <tr><td>Image</td><td>600px thumbnail (or copy if tool missing)</td><td>ImageMagick</td></tr>
+        <tr><td>Video</td><td>1-second thumbnail + duration + multi-quality HLS bundle</td><td>FFmpeg / FFprobe</td></tr>
+        <tr><td>PDF</td><td>First-page PNG preview</td><td>ImageMagick</td></tr>
+        <tr><td>PPT/PPTX</td><td>Convert to full PDF + first-slide PNG</td><td>LibreOffice (+ ImageMagick)</td></tr>
+      </table></div>
+      <div class="cal note"><div class="t">🔵 Graceful degradation</div>If a tool is missing the upload still succeeds — only that preview is skipped. For PPT, the browser-side viewer (<code>ppt-viewer.js</code>) is the fallback.</div>
+
+      <h3>Secure viewing flow</h3>
+      <div class="mermaid">
+flowchart TD
+  V["Open /media/{uuid}"] --> W["MediaController::show() logs view + issues 15-min token"]
+  W --> X["Page loads with a stream token"]
+  X --> Y["Player requests /stream/{uuid}?token=…"]
+  Y --> Z["StreamController::authorize() checks login + section + token"]
+  Z -->|ok| S["Streams bytes (supports seeking)"]
+  Z -->|fail| F["403 Forbidden"]
+      </div>
+
+      <h3>Video quality system</h3>
+      <p>At upload, FFmpeg can create several resolutions (240p/480p/720p/1080p) defined in <code>config.php</code> → <code>hls_renditions</code>,
+      bundled into an HLS “master playlist”. In the browser, <code>player.js</code> + HLS.js let the user pick <b>Auto</b> or a fixed quality.
+      If no HLS exists, it falls back to a single MP4 and the Quality option is hidden.</p>
+
+      <h3>Files involved (summary)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Concern</th><th>Files</th></tr>
+        <tr><td>Upload UI</td><td><code>upload/form.php</code>, <code>upload.js</code></td></tr>
+        <tr><td>Upload logic</td><td><code>UploadController.php</code></td></tr>
+        <tr><td>Processing</td><td><code>Services/MediaProcessor.php</code></td></tr>
+        <tr><td>Storage helpers</td><td><code>helpers.php</code> (<code>storage_path</code>), <code>config.php</code></td></tr>
+        <tr><td>Serving/streaming</td><td><code>StreamController.php</code>, <code>StreamToken.php</code></td></tr>
+        <tr><td>Viewers</td><td><code>media/show.php</code>, <code>player.js</code>, <code>ppt-viewer.js</code>, <code>watermark.js</code>, <code>security.js</code></td></tr>
+      </table></div>
+    </section>
+
+    <!-- ===================================================== SECTION 13 -->
+    <section class="section" id="s13">
+      <h2><span class="num">13</span> Category System</h2>
+      <p class="lead">Categories are a tree: a few top-level “parents”, each with “children”, which can have their own children.</p>
+
+      <h3>Parents &amp; children</h3>
+      <ul class="clean">
+        <li><b>Graphics</b> section parents: <code>Gimmick</code>, <code>Art</code>, <code>Hybrid</code>. Example chain: <i>Art → Videos → Invitation Videos</i>.</li>
+        <li><b>Events</b> section parent: <code>Events</code> (Conference activities, Stall fabrication, …).</li>
+        <li>A category points to its parent via <code>parent_id</code>. Top-level categories have no parent.</li>
+      </ul>
+
+      <h3>“Attach all parents” rule (important)</h3>
+      <p>When you upload/edit and tick a <i>leaf</i> category (e.g. “Invitation Videos”), the backend automatically also attaches its
+      parents (“Videos”, “Art”). This is done by <code>Category::ancestorIds()</code> in <code>UploadController</code>/<code>MediaController</code>.
+      That's why filtering by either the leaf <i>or</i> the top-level returns the file.</p>
+
+      <h3>Where category COUNTS are calculated</h3>
+      <div class="cal tip"><div class="t">🟢 Exact answer</div>
+      The little “(2)” count badge on each category card is calculated in <b><code>public/assets/js/upload.js</code></b>, in the
+      <code>refreshCounts()</code> function. It counts the <i>checked</i> checkboxes inside each <code>.cat-card</code> and writes the number into
+      <code>.cat-card-count</code>. It runs on both the <b>Upload</b> and <b>Edit</b> pages.</div>
+      <p>Search-box suggestion counts (how many files are under a category/company) are calculated server-side in
+      <code>Media::suggest()</code> using <code>COUNT()</code> queries.</p>
+
+      <h3>Category filters on the dashboard</h3>
+      <p>Clicking a category in the sidebar reloads <code>/dashboard?category={id}</code>. <code>Media::search()</code> then matches that
+      category <i>and all of its descendants</i> (via <code>Category::descendantIds()</code>), so picking a parent shows everything beneath it.</p>
+
+      <h3>Where to modify</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Want to…</th><th>Edit…</th></tr>
+        <tr><td>Add/rename categories permanently</td><td>Admin → Categories (or <code>seed.sql</code> for fresh installs)</td></tr>
+        <tr><td>Change how counts are shown</td><td><code>upload.js</code> → <code>refreshCounts()</code> + <code>.cat-card-count</code> CSS</td></tr>
+        <tr><td>Change tree rendering</td><td><code>_sidebar.php</code> (dashboard) / <code>admin/categories.php</code> + <code>Category.php</code></td></tr>
+        <tr><td>Change filter matching</td><td><code>Media::search()</code> + <code>Category::descendantIds()</code></td></tr>
+      </table></div>
+    </section>
+
+
+    <!-- ===================================================== SECTION 14 -->
+    <section class="section" id="s14">
+      <h2><span class="num">14</span> Troubleshooting Guide</h2>
+      <p class="lead">A quick lookup table of 50+ common problems. Find your symptom, see the likely cause, the files to check, and the fix.</p>
+      <div class="tablewrap"><table>
+        <tr><th style="width:22%">Issue</th><th style="width:24%">Possible cause</th><th style="width:26%">Files to check</th><th>Solution</th></tr>
+
+        <tr><td>“Database connection failed” on every page</td><td>Wrong DB credentials or port</td><td><code>.env</code>, <code>config.php</code>, <code>Database.php</code></td><td>Set correct <code>DB_HOST/NAME/USER/PASS</code>; ensure <code>DB_PORT=3306</code> (not 80).</td></tr>
+        <tr><td>Blank white page</td><td>PHP fatal error with display off</td><td><code>storage/logs/php-error.log</code>, <code>bootstrap.php</code></td><td>Read the log; temporarily set <code>APP_DEBUG=true</code> in <code>.env</code>.</td></tr>
+        <tr><td>All links 404</td><td>.htaccess/rewrite not active</td><td><code>public/.htaccess</code>, root <code>.htaccess</code>, Apache config</td><td>Enable <code>mod_rewrite</code>/<code>AllowOverride All</code>, or use the Nginx config from README.</td></tr>
+        <tr><td>storage/ files downloadable publicly</td><td>Doc root not pointing at <code>public/</code></td><td>server config, <code>.htaccess</code></td><td>Point document root at <code>public/</code>. Critical security fix.</td></tr>
+        <tr><td>Can't log in (correct password)</td><td>Account inactive or throttled</td><td><code>users.is_active</code>, <code>failed_logins</code>, <code>AuthController</code></td><td>Set <code>is_active=1</code>; wait 15 min or clear <code>failed_logins</code> for that IP.</td></tr>
+        <tr><td>“Too many failed attempts”</td><td>5+ wrong tries in 15 min</td><td><code>AuthController::login()</code>, <code>failed_logins</code></td><td>Wait, or delete that IP's recent rows; adjust the limit if needed.</td></tr>
+        <tr><td>Logged out immediately</td><td>Session cookie blocked (HTTP vs HTTPS) or clock skew</td><td><code>bootstrap.php</code> session settings</td><td>Use HTTPS in production; check server time; verify cookie domain.</td></tr>
+        <tr><td>419 “CSRF token mismatch”</td><td>Stale form / session expired</td><td><code>Csrf.php</code>, the form view</td><td>Refresh the page to get a new token; ensure the form includes <code>Csrf::field()</code>.</td></tr>
+        <tr><td>Events user sees no media</td><td>Visibility based only on primary section (old bug)</td><td><code>Media::search()</code>, <code>Auth.php</code></td><td>Already fixed via category-aware visibility; ensure latest code is deployed.</td></tr>
+        <tr><td>Upload says “exceeds server limit”</td><td>PHP upload limits too low</td><td><code>php.ini</code>, <code>config.php</code> (<code>UPLOAD_MAX_MB</code>)</td><td>Raise <code>upload_max_filesize</code> &amp; <code>post_max_size</code>.</td></tr>
+        <tr><td>“No file received”</td><td>File bigger than <code>post_max_size</code></td><td><code>php.ini</code></td><td>Increase <code>post_max_size</code> above the file size.</td></tr>
+        <tr><td>“File type not allowed”</td><td>Type not in allow-list</td><td><code>config.php</code> (<code>allowed_mimes</code>), <code>UploadController::detectMime()</code></td><td>Add the MIME type to the allow-list.</td></tr>
+        <tr><td>“Thumbnail required”</td><td>Video/PPT/PDF needs a custom thumbnail</td><td><code>UploadController::store()</code>, <code>upload.js</code></td><td>Upload a thumbnail image, or change the rule.</td></tr>
+        <tr><td>Video has no thumbnail</td><td>FFmpeg missing</td><td><code>MediaProcessor</code>, <code>.env</code> (<code>FFMPEG_BIN</code>)</td><td>Install FFmpeg; set the binary path.</td></tr>
+        <tr><td>No video “Quality” option</td><td>No HLS renditions made</td><td><code>MediaProcessor::transcodeHls()</code>, FFmpeg</td><td>Install FFmpeg; re-upload so multiple resolutions are generated.</td></tr>
+        <tr><td>Video won't play</td><td>HLS.js blocked by CSP, or token expired</td><td><code>bootstrap.php</code> CSP, <code>player.js</code>, <code>StreamToken</code></td><td>Allow <code>cdn.jsdelivr.net</code>; reload page to refresh token.</td></tr>
+        <tr><td>PDF too small</td><td>Stage sizing</td><td><code>.pdf-stage</code> in <code>app.css</code></td><td>Already fixed (full-size iframe); clear CSS cache.</td></tr>
+        <tr><td>PDF download button still shows</td><td>Firefox ignores <code>#toolbar=0</code></td><td><code>media/show.php</code></td><td>Accept (Chrome/Edge hide it) or build a PDF.js custom viewer.</td></tr>
+        <tr><td>PPT shows “can't display”</td><td>No PDF preview + PPTXjs failed</td><td><code>ppt-viewer.js</code>, <code>MediaProcessor</code>, LibreOffice</td><td>Install LibreOffice for high-quality PDF conversion; check CSP for CDN.</td></tr>
+        <tr><td>PPT last slide cut off</td><td>PPTXjs container height bug</td><td><code>.pptx-host</code> CSS</td><td>Already fixed (auto-height + overflow visible).</td></tr>
+        <tr><td>Edit page category count shows 0</td><td>Cached old <code>upload.js</code></td><td><code>upload.js</code>, <code>helpers.php</code> (asset versioning)</td><td>Hard refresh; cache-busting <code>?v=</code> now prevents recurrence.</td></tr>
+        <tr><td>Category counts wrong</td><td>refreshCounts not running</td><td><code>upload.js</code> → <code>refreshCounts()</code></td><td>Ensure the script loads on that page; check console for errors.</td></tr>
+        <tr><td>Mobile menu closes when tapping a category</td><td>Overlay above the menu</td><td><code>app.css</code> (<code>.drawer-overlay</code>), <code>app.js</code></td><td>Already fixed (overlay sits beside the drawer).</td></tr>
+        <tr><td>Mobile menu header hidden/glitchy</td><td>Sticky-header overlap</td><td><code>.drawer-head</code>/<code>.drawer-body</code> CSS</td><td>Already fixed (flex header + scrollable body).</td></tr>
+        <tr><td>Admin nav pushed below stats on mobile</td><td>Stacked layout</td><td><code>app.css</code>, <code>_nav.php</code></td><td>Already fixed (hamburger drawer ≤960px).</td></tr>
+        <tr><td>Admin tables overflow on mobile</td><td>Wide tables</td><td><code>.table-wrap</code>, <code>.admin-content</code> CSS</td><td>Already fixed (horizontal scroll + min-width:0).</td></tr>
+        <tr><td>Search suggestions don't appear</td><td>JS error or wrong base path</td><td><code>search-suggest.js</code>, <code>SearchController</code></td><td>Check console; ensure <code>/search/suggest</code> returns JSON.</td></tr>
+        <tr><td>Search returns nothing</td><td>Section permissions / typo</td><td><code>Media::suggest()/search()</code>, <code>Auth</code></td><td>Verify the user's section access; query needs ≥2 characters.</td></tr>
+        <tr><td>Watermark missing</td><td>Feature flag off or JS not loaded</td><td><code>.env</code> (<code>ENABLE_WATERMARK</code>), <code>watermark.js</code>, <code>layouts/app.php</code></td><td>Set flag true; confirm the script is included.</td></tr>
+        <tr><td>Right-click still works on media</td><td>Deterrents are best-effort</td><td><code>security.js</code></td><td>Expected — these are deterrents, not guarantees.</td></tr>
+        <tr><td>CSS/JS changes don't show</td><td>Browser cache</td><td><code>helpers.php</code> <code>asset()</code></td><td>Hard refresh; cache-busting <code>?v=mtime</code> handles future changes.</td></tr>
+        <tr><td>Diagrams missing in this doc</td><td>Mermaid CDN blocked</td><td>this HTML's CDN link</td><td>Allow <code>cdn.jsdelivr.net</code> or host Mermaid locally.</td></tr>
+        <tr><td>Wrong timezone in logs</td><td>App timezone setting</td><td><code>config.php</code> (<code>tz</code>), <code>bootstrap.php</code></td><td>Set the correct timezone string.</td></tr>
+        <tr><td>Duplicate upload not detected</td><td>Hash mismatch (file changed)</td><td><code>UploadController</code>, <code>media.file_hash</code></td><td>Only byte-identical files dedupe; expected behaviour.</td></tr>
+        <tr><td>Permissions change has no effect</td><td>Session caches old permissions</td><td><code>Auth::attempt()</code>, <code>users</code></td><td>Have the user log out/in; or implement live refresh.</td></tr>
+        <tr><td>Can't delete media</td><td>No delete permission</td><td><code>MediaController::destroy()</code>, <code>Auth</code></td><td>Grant <code>can_delete</code> or use a super admin.</td></tr>
+        <tr><td>Deleted media files remain on disk</td><td>File unlink failed (permissions)</td><td><code>MediaController::destroy()</code>, storage perms</td><td>Ensure the web user can write/delete in <code>storage/</code>.</td></tr>
+        <tr><td>Upload succeeds but file missing</td><td>storage/ not writable</td><td>folder permissions, <code>storage_path()</code></td><td>Give the web server write access to <code>storage/uploads/</code>.</td></tr>
+        <tr><td>“View not found” error</td><td>Misspelled template name</td><td><code>View.php</code>, the calling controller</td><td>Match the exact path under <code>app/Views/</code>.</td></tr>
+        <tr><td>500 error after editing a controller</td><td>PHP syntax error</td><td>the edited file, <code>php -l</code></td><td>Run <code>php -l file.php</code> to find the line.</td></tr>
+        <tr><td>Company filter empty</td><td>No companies / migration not run</td><td><code>companies</code> table, migration</td><td>Run the companies migration; add companies in admin.</td></tr>
+        <tr><td>New category not in dashboard</td><td>Wrong section / cache</td><td><code>categories.section_id</code></td><td>Create it under the right section; refresh.</td></tr>
+        <tr><td>Parent filter misses some files</td><td>Ancestors not attached (old data)</td><td>backfill migration</td><td>Run <code>backfill_media_category_ancestors.sql</code>.</td></tr>
+        <tr><td>HLS plays but can't seek</td><td>Range requests blocked</td><td><code>StreamController::serveFile()</code>, proxy</td><td>Ensure the server/proxy allows byte-range requests.</td></tr>
+        <tr><td>Login page loops</td><td>Session not persisting</td><td>session save path, cookies</td><td>Ensure PHP can write sessions; check cookie settings.</td></tr>
+        <tr><td>Slow uploads of big videos</td><td>HLS transcode runs during upload</td><td><code>MediaProcessor::transcodeHls()</code></td><td>Move transcoding to a background job (see <a href="#s20">Section 20</a>).</td></tr>
+        <tr><td>Activity log empty</td><td>Logging swallowed an error</td><td><code>ActivityLog</code>, <code>activity_logs</code></td><td>Check the DB table exists and is writable.</td></tr>
+        <tr><td>“Forbidden” on admin pages</td><td>Not super admin / can't manage users</td><td><code>RequireAdmin</code>, <code>users</code></td><td>Grant <code>can_manage_users</code> or use super admin.</td></tr>
+        <tr><td>Images not optimised</td><td>ImageMagick missing</td><td><code>MediaProcessor</code>, <code>.env</code></td><td>Install ImageMagick (<code>convert</code>); originals still display.</td></tr>
+        <tr><td>Wrong file extension saved</td><td>MIME→extension mapping</td><td><code>UploadController::extFor()</code></td><td>Add the mapping for that type.</td></tr>
+        <tr><td>Mermaid/PPTXjs blocked</td><td>CSP too strict</td><td><code>bootstrap.php</code> CSP</td><td>Ensure <code>cdn.jsdelivr.net</code> is allowed for script/style/img.</td></tr>
+        <tr><td>“Internal Server Error” only in production</td><td>Debug off hides details</td><td><code>.env</code> (<code>APP_DEBUG</code>), logs</td><td>Read <code>storage/logs/php-error.log</code>.</td></tr>
+        <tr><td>Theme (dark/light) not saved</td><td>Cookie blocked</td><td><code>app.js</code> theme toggle</td><td>Allow cookies; check the theme cookie is set.</td></tr>
+        <tr><td>Pagination broken</td><td>Bad page parameter</td><td><code>Media::search()</code>, <code>dashboard/index.php</code></td><td>Ensure <code>page</code> is a positive number.</td></tr>
+      </table></div>
+    </section>
+
+
+    <!-- ===================================================== SECTION 15 -->
+    <section class="section" id="s15">
+      <h2><span class="num">15</span> Change Request Guide</h2>
+      <p class="lead">Common “I want to…” requests, with the exact files to edit and what to test afterwards.</p>
+
+      <details class="box" open><summary>“I want to add a new page”</summary><div class="body">
+        <ol class="clean">
+          <li><b>Add a route</b> in <code>app/routes.php</code> (e.g. <code>$router-&gt;get('/reports', [ReportController::class,'index'], [RequireAuth::class]);</code>).</li>
+          <li><b>Create the controller</b> in <code>app/Controllers/</code> with an <code>index()</code> method that calls <code>view('reports/index', [...])</code>.</li>
+          <li><b>Create the view</b> in <code>app/Views/reports/index.php</code> (start with <code>$this-&gt;extend('layouts/app');</code>).</li>
+          <li><b>(Optional)</b> add a link in <code>layouts/app.php</code> or the relevant nav.</li>
+        </ol>
+        <p><b>Test:</b> visit the URL logged in and logged out; confirm the gate works.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to add a new role”</summary><div class="body">
+        <ol class="clean">
+          <li>Add the role to the <code>roles</code> table (and <code>seed.sql</code> for fresh installs).</li>
+          <li>Decide its section access &amp; powers; reflect them in the per-user <code>can_*</code> switches when creating users.</li>
+          <li>If the role needs special logic, update <code>Auth.php</code> (e.g. a new <code>canX()</code> or <code>allowedSections()</code> rule).</li>
+          <li>Show the role in <code>admin/users.php</code> dropdown (it reads <code>User::roles()</code> automatically).</li>
+        </ol>
+        <p><b>Test:</b> create a user with the new role; verify what they can/can't see.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to add a new category”</summary><div class="body">
+        <p><b>Easiest:</b> Admin → Categories → choose section + parent + name. Done.</p>
+        <p><b>For fresh installs:</b> add an <code>INSERT</code> in <code>seed.sql</code>.</p>
+        <p><b>Test:</b> it appears in the dashboard sidebar and in the upload/edit category picker.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to change the dashboard design”</summary><div class="body">
+        <ul class="clean">
+          <li>Layout/markup → <code>Views/dashboard/index.php</code> and <code>_card.php</code>.</li>
+          <li>Colours/spacing/grid → <code>app.css</code> (look for <code>.media-grid</code>, <code>.media-card</code>, <code>.filterbar</code>).</li>
+          <li>Behaviour (hover preview) → <code>app.js</code>.</li>
+        </ul>
+        <p><b>Test:</b> desktop + mobile; check filters and pagination still work.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to modify upload functionality”</summary><div class="body">
+        <ul class="clean">
+          <li>UI/validation messages → <code>upload/form.php</code> + <code>upload.js</code>.</li>
+          <li>Server validation, dedupe, storage → <code>UploadController::store()</code>.</li>
+          <li>Allowed types/limits → <code>config.php</code>.</li>
+          <li>Preview generation → <code>MediaProcessor.php</code>.</li>
+        </ul>
+        <p><b>Test:</b> each file type; a duplicate; an oversize file; a missing-thumbnail case.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to add a new media type (e.g. audio)”</summary><div class="body">
+        <ol class="clean">
+          <li>Add its MIME to <code>config.php</code> <code>allowed_mimes</code>.</li>
+          <li>Add classification in <code>MediaProcessor::classify()</code> and the <code>media_type</code> enum in the DB.</li>
+          <li>Add a viewer branch in <code>media/show.php</code>.</li>
+          <li>Add an extension mapping in <code>UploadController::extFor()</code>.</li>
+        </ol>
+        <p><b>Test:</b> upload + view + thumbnail + download.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to log a new action”</summary><div class="body">
+        <p>Call <code>ActivityLog::record('media.share', 'media', $id, ['to'=&gt;$email]);</code> from the relevant controller. It appears in Admin → Activity.</p>
+      </div></details>
+    </section>
+
+    <!-- ===================================================== SECTION 16 -->
+    <section class="section" id="s16">
+      <h2><span class="num">16</span> Developer Onboarding Guide</h2>
+      <p class="lead">Step-by-step setup for a brand-new developer or server.</p>
+
+      <h3>Install &amp; run locally</h3>
+      <ol class="clean">
+        <li>Install <b>PHP 8.2+</b> and <b>MySQL/MariaDB</b>. (Optional: FFmpeg, ImageMagick, LibreOffice for previews.)</li>
+        <li>Get the code:
+<pre><code>git clone https://github.com/geryshadesinnovations/grey-media.git
+cd grey-media
+cp .env.example .env   # then edit .env</code></pre></li>
+        <li>Create the database (phpMyAdmin or CLI): import <code>database/schema.sql</code>, then <code>database/seed.sql</code>, then each file in <code>database/migrations/</code> in date order.</li>
+        <li>Edit <code>.env</code>: set <code>DB_*</code>, <code>APP_URL</code>, <code>STORAGE_PATH</code>. Ensure <code>DB_PORT=3306</code>.</li>
+        <li>Make <code>storage/</code> writable by the web server.</li>
+        <li>Run the built-in server:
+<pre><code>php -S localhost:8080 -t public public/index.php</code></pre>
+          Visit <code>http://localhost:8080</code>.</li>
+        <li>Log in with the seeded admin: <code>admin@greyshades.local</code> / <code>Admin@12345</code> — then change the password immediately.</li>
+      </ol>
+
+      <h3>Environment variables (.env)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Variable</th><th>Meaning</th></tr>
+        <tr><td><code>APP_URL</code></td><td>Base address of the site (used to build links).</td></tr>
+        <tr><td><code>APP_DEBUG</code></td><td><code>true</code> shows errors on screen (dev only).</td></tr>
+        <tr><td><code>DB_HOST/PORT/NAME/USER/PASS</code></td><td>Database connection details.</td></tr>
+        <tr><td><code>STORAGE_PATH</code></td><td>Absolute path to the private storage folder.</td></tr>
+        <tr><td><code>UPLOAD_MAX_MB</code></td><td>Max upload size shown in the UI.</td></tr>
+        <tr><td><code>FFMPEG_BIN/FFPROBE_BIN/IMAGEMAGICK_BIN/LIBREOFFICE_BIN</code></td><td>Paths to media tools.</td></tr>
+        <tr><td><code>SESSION_LIFETIME_MIN</code> / <code>STREAM_TOKEN_TTL_MIN</code></td><td>How long sessions / streaming tickets last.</td></tr>
+        <tr><td><code>ENABLE_WATERMARK</code> / <code>ENABLE_ANTI_INSPECT</code></td><td>Toggle the protection features.</td></tr>
+      </table></div>
+
+      <h3>Build process</h3>
+      <div class="cal tip"><div class="t">🟢 There is none</div>No compiler/bundler. Edit a file → refresh the browser. CSS/JS get a <code>?v=</code> version automatically so caches update.</div>
+
+      <h3>Deployment process</h3>
+      <ol class="clean">
+        <li>Push to <code>main</code> (already configured) and pull on the server, or upload the files.</li>
+        <li>Point the web server's document root at <code>public/</code> (Apache) or use the Nginx config in README.</li>
+        <li>Set production <code>.env</code> (real DB, <code>APP_DEBUG=false</code>, HTTPS URL).</li>
+        <li>Run any new migrations.</li>
+        <li>Confirm <code>storage/</code> is writable and <b>not</b> publicly reachable.</li>
+      </ol>
+      <div class="cal note"><div class="t">🔵 Git workflow used here</div>Changes are committed and pushed to the <code>main</code> branch via the platform's GitHub tools (never a raw force-push to main).</div>
+    </section>
+
+    <!-- ===================================================== SECTION 17 -->
+    <section class="section" id="s17">
+      <h2><span class="num">17</span> Security Documentation</h2>
+      <p class="lead">Security is layered (“defence in depth”). No single layer is perfect, but together they make misuse hard and traceable.</p>
+
+      <h3>Authentication security</h3>
+      <ul class="clean">
+        <li>Passwords stored as <b>bcrypt hashes</b>, never plain text; re-hashed if the algorithm strengthens.</li>
+        <li><b>Session fixation</b> prevented by regenerating the session ID on login.</li>
+        <li><b>Login throttling</b>: 5 failures per IP per 15 minutes.</li>
+        <li>Cookies are <b>HttpOnly</b>, <b>SameSite=Lax</b>, and <b>Secure</b> on HTTPS.</li>
+      </ul>
+
+      <h3>Authorization security</h3>
+      <ul class="clean">
+        <li>Every protected route runs <code>RequireAuth</code>/<code>RequireAdmin</code> <i>before</i> the controller.</li>
+        <li>Section visibility is enforced in queries <i>and</i> in the viewer/stream authorisation.</li>
+        <li>Downloads are separately gated (<code>is_downloadable</code> + per-user grants) and fully logged.</li>
+      </ul>
+
+      <h3>File-upload security</h3>
+      <ul class="clean">
+        <li>File type is detected from content (<code>finfo</code>), not just the name, and checked against an allow-list.</li>
+        <li>Files are stored with random UUID names in a <b>private</b> folder, served only through PHP with a valid token.</li>
+        <li>Real file paths never appear in any URL.</li>
+      </ul>
+
+      <h3>Database security</h3>
+      <ul class="clean">
+        <li>All queries use <b>prepared statements</b> (parameters sent separately) — this blocks SQL injection.</li>
+        <li>The DB user should have only the privileges it needs.</li>
+      </ul>
+
+      <h3>API / output security</h3>
+      <ul class="clean">
+        <li>Output is escaped with <code>e()</code> to prevent XSS (malicious scripts in data).</li>
+        <li>A strict <b>Content-Security-Policy</b> limits where scripts/styles/media can come from.</li>
+        <li>Headers: <code>X-Content-Type-Options</code>, <code>X-Frame-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>.</li>
+        <li>Path-traversal guards on streaming (<code>basename()</code> + real-path checks).</li>
+      </ul>
+
+      <div class="cal warn"><div class="t">🟠 Honest limitation</div>
+      The browser “anti-copy” deterrents (<code>security.js</code>) and the watermark <b>raise the effort</b> to leak content and make leaks traceable, but
+      cannot guarantee 100% prevention (a determined user can screen-record). The real protections are server-side: token-gated streaming, audit logs, and the watermark.</div>
+    </section>
+
+    <!-- ===================================================== SECTION 18 -->
+    <section class="section" id="s18">
+      <h2><span class="num">18</span> Complete Data Flow Diagrams</h2>
+      <p class="lead">Visual summaries of the five most important journeys.</p>
+
+      <h3>1) Login</h3>
+      <div class="mermaid">
+flowchart LR
+  A["Login form"] --> B["POST /login"]
+  B --> C["CSRF + throttle checks"]
+  C --> D["Verify password (bcrypt)"]
+  D -->|ok| E["Create session + cookie"]
+  E --> F["Log 'login' + track session"]
+  F --> G["Redirect to /dashboard"]
+  D -->|fail| H["Record failed_login → back to /login"]
+      </div>
+
+      <h3>2) Media Upload</h3>
+      <div class="mermaid">
+flowchart LR
+  A["Drag file"] --> B["upload.js XHR"]
+  B --> C["store() validate"]
+  C --> D["SHA-256 dedupe"]
+  D --> E["Save original"]
+  E --> F["Make previews (FFmpeg/IM/LO)"]
+  F --> G["Insert media + attach categories(+parents)"]
+  G --> H["JSON success"]
+      </div>
+
+      <h3>3) Media View</h3>
+      <div class="mermaid">
+flowchart LR
+  A["Open /media/{uuid}"] --> B["show(): log view + issue token"]
+  B --> C["Render viewer + watermark"]
+  C --> D["Player requests /stream?token"]
+  D --> E["authorize(): login+section+token"]
+  E -->|ok| F["Stream bytes"]
+  E -->|no| G["403"]
+      </div>
+
+      <h3>4) Category Selection</h3>
+      <div class="mermaid">
+flowchart LR
+  A["Click category in sidebar"] --> B["/dashboard?category=ID"]
+  B --> C["search(): match category + ALL descendants"]
+  C --> D["Return matching media"]
+  D --> E["Render grid"]
+      </div>
+
+      <h3>5) Admin Dashboard</h3>
+      <div class="mermaid">
+flowchart LR
+  A["Open /admin"] --> B["RequireAdmin gate"]
+  B --> C["statsOverview() counts"]
+  B --> D["recent activity_logs"]
+  B --> E["live user_sessions (last 15 min)"]
+  C --> F["Render admin overview"]
+  D --> F
+  E --> F
+      </div>
+    </section>
+
+
+    <!-- ===================================================== SECTION 19 -->
+    <section class="section" id="s19">
+      <h2><span class="num">19</span> Glossary</h2>
+      <p class="lead">Plain-English definitions of the technical words used in this document.</p>
+      <div class="tablewrap"><table>
+        <tr><th>Term</th><th>Beginner-friendly meaning</th></tr>
+        <tr><td>Frontend</td><td>The part of the app that runs in your web browser (what you see/click).</td></tr>
+        <tr><td>Backend</td><td>The program on the server that decides what to send to your browser.</td></tr>
+        <tr><td>Server</td><td>A computer in a data centre that hosts the website.</td></tr>
+        <tr><td>PHP</td><td>The programming language used for the backend here.</td></tr>
+        <tr><td>HTML / CSS / JavaScript</td><td>Page structure / styling / interactivity in the browser.</td></tr>
+        <tr><td>MVC</td><td>A tidy way to organise code: Model (data), View (page), Controller (coordinator).</td></tr>
+        <tr><td>Router</td><td>The part that matches a web address to the code that should run.</td></tr>
+        <tr><td>Route</td><td>A single web address rule (e.g. <code>/dashboard</code>).</td></tr>
+        <tr><td>Controller</td><td>Code that handles a request and decides the response.</td></tr>
+        <tr><td>Model</td><td>Code that reads/writes the database for one topic (e.g. media).</td></tr>
+        <tr><td>View / Template</td><td>An HTML file that becomes the page you see.</td></tr>
+        <tr><td>Partial</td><td>A reusable chunk of a page (filename starts with <code>_</code>).</td></tr>
+        <tr><td>Middleware</td><td>A “gate” that runs before a page to check permission.</td></tr>
+        <tr><td>Database</td><td>Organised storage of structured info, in tables.</td></tr>
+        <tr><td>Table / Row / Column</td><td>Like a spreadsheet / one record / one field.</td></tr>
+        <tr><td>Primary key (id)</td><td>A unique number identifying each row.</td></tr>
+        <tr><td>Foreign key</td><td>A column pointing to a row in another table (a link).</td></tr>
+        <tr><td>Junction table</td><td>A linking table for many-to-many relationships.</td></tr>
+        <tr><td>Query</td><td>A request to the database for data.</td></tr>
+        <tr><td>SQL</td><td>The language used to talk to the database.</td></tr>
+        <tr><td>Prepared statement</td><td>A safe way to run a query so user input can't hack it.</td></tr>
+        <tr><td>SQL injection</td><td>An attack that tricks a database via unsafe input (prevented here).</td></tr>
+        <tr><td>Session</td><td>The server remembering you're logged in between pages.</td></tr>
+        <tr><td>Cookie</td><td>A small token your browser stores (here: your session ID).</td></tr>
+        <tr><td>JWT</td><td>A token-based login style — <b>not</b> used here (sessions are used instead).</td></tr>
+        <tr><td>Authentication</td><td>Proving who you are (login).</td></tr>
+        <tr><td>Authorization</td><td>What you're allowed to do (permissions).</td></tr>
+        <tr><td>Role</td><td>A named group of default permissions.</td></tr>
+        <tr><td>CSRF</td><td>An attack where another site submits a form as you (blocked by tokens).</td></tr>
+        <tr><td>XSS</td><td>Injecting malicious scripts via data (blocked by escaping).</td></tr>
+        <tr><td>CSP</td><td>A rule list of where scripts/styles/media may load from.</td></tr>
+        <tr><td>Hash (SHA-256 / bcrypt)</td><td>A one-way scramble. SHA-256 fingerprints files; bcrypt protects passwords.</td></tr>
+        <tr><td>UUID</td><td>A long random ID used publicly instead of a real file name.</td></tr>
+        <tr><td>MIME type</td><td>The exact format of a file (e.g. <code>video/mp4</code>).</td></tr>
+        <tr><td>Thumbnail</td><td>A small preview image.</td></tr>
+        <tr><td>HLS</td><td>A way to stream video in several qualities that adapt to your connection.</td></tr>
+        <tr><td>Rendition</td><td>One quality version of a video (e.g. 720p).</td></tr>
+        <tr><td>Transcode</td><td>Convert a video into other formats/qualities.</td></tr>
+        <tr><td>Stream token</td><td>A short-lived pass that lets you load a specific file.</td></tr>
+        <tr><td>CDN</td><td>A fast public file server for shared libraries (jsDelivr here).</td></tr>
+        <tr><td>Library</td><td>Pre-written code you reuse (hls.js, PPTXjs).</td></tr>
+        <tr><td>API endpoint</td><td>A web address that returns data (often JSON) for the app to use.</td></tr>
+        <tr><td>JSON</td><td>A simple text format for data exchange.</td></tr>
+        <tr><td>XHR / fetch</td><td>JavaScript asking the server for something in the background.</td></tr>
+        <tr><td>Cache</td><td>A stored copy to load faster (can show stale files until busted).</td></tr>
+        <tr><td>Cache-busting</td><td>Adding <code>?v=</code> so browsers fetch the new file after a change.</td></tr>
+        <tr><td>Responsive</td><td>Layout that adapts to screen size.</td></tr>
+        <tr><td>Breakpoint</td><td>A screen width where the layout changes.</td></tr>
+        <tr><td>Drawer</td><td>A panel that slides in (the mobile menu).</td></tr>
+        <tr><td>Migration</td><td>A script that changes the database structure over time.</td></tr>
+        <tr><td>Seed</td><td>Starter data inserted into a fresh database.</td></tr>
+        <tr><td>Soft delete</td><td>Marking a record inactive instead of erasing it.</td></tr>
+        <tr><td>Degrade gracefully</td><td>Keep working (with less) when an optional tool is missing.</td></tr>
+        <tr><td>Watermark</td><td>A moving label over media that identifies the viewer.</td></tr>
+      </table></div>
+    </section>
+
+    <!-- ===================================================== SECTION 20 -->
+    <section class="section" id="s20">
+      <h2><span class="num">20</span> Future Improvements</h2>
+      <p class="lead">Honest recommendations to make the platform faster, safer and easier to scale.</p>
+
+      <h3>Recommended improvements</h3>
+      <ul class="clean">
+        <li><b>Background job queue</b> for video transcoding (don't do it during the upload request) — see technical debt below.</li>
+        <li><b>Forgot/Reset password</b> flow and optional two-factor login.</li>
+        <li><b>Live permission refresh</b> so changes apply without re-login.</li>
+        <li><b>Cross-browser PDF viewer</b> (PDF.js) to hide the download button consistently, including Firefox.</li>
+        <li><b>Bulk actions</b> (multi-select cards to tag/categorise/delete).</li>
+        <li><b>Per-file download grants UI</b> in the admin panel.</li>
+        <li><b>Server tools health page</b> showing whether FFmpeg/ImageMagick/LibreOffice are installed.</li>
+      </ul>
+
+      <h3>Technical debt (things to tidy up)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Item</th><th>Why it matters</th></tr>
+        <tr><td>Synchronous HLS transcoding</td><td>Large video uploads can time out; should be queued.</td></tr>
+        <tr><td>No automated tests</td><td>Changes risk silent regressions; add basic tests.</td></tr>
+        <tr><td>CSRF verified inside controllers, not as middleware</td><td>Works, but a consistent middleware would be cleaner.</td></tr>
+        <tr><td>Expired stream tokens not auto-purged</td><td>Add a cron job calling <code>StreamToken::purgeExpired()</code>.</td></tr>
+        <tr><td><code>companies</code> only in a migration</td><td>Fold it into <code>schema.sql</code> for simpler installs.</td></tr>
+      </table></div>
+
+      <h3>Scalability recommendations</h3>
+      <ul class="clean">
+        <li>Move file storage to cloud object storage (S3/Backblaze) behind the same PHP access layer.</li>
+        <li>Serve HLS through a CDN with signed URLs for large audiences.</li>
+        <li>Add database read-replicas if traffic grows.</li>
+      </ul>
+
+      <h3>Performance optimisations</h3>
+      <ul class="clean">
+        <li>Add caching for category trees and dashboard counts.</li>
+        <li>Lazy-load grid images (already partly done) and paginate via infinite scroll.</li>
+        <li>Pre-generate all video renditions off-peak.</li>
+      </ul>
+
+      <div class="ph">📸 Screenshot placeholder — add a picture of the dashboard, viewer, upload page and admin panel here for future reference.</div>
+    </section>
+
+    <footer style="border-top:1px solid var(--line);margin-top:30px;padding-top:20px;color:var(--muted);font-size:13px">
+      <p>Greyshades Media Platform — internal documentation. Generated for non-technical readers.
+      Keep this file in <code>docs/documentation.html</code> and update it whenever the app changes.</p>
+    </footer>
+
+   </div><!-- /.wrap -->
+  </main>
+</div><!-- /.layout -->
+
+<button class="backtop" id="backtop" aria-label="Back to top">↑</button>
+
+<script>
+  // Mermaid diagrams
+  try { mermaid.initialize({ startOnLoad:true, theme:'dark',
+    themeVariables:{ fontSize:'14px', primaryColor:'#1b1f2b', primaryBorderColor:'#7c5cff',
+      lineColor:'#60a5fa', primaryTextColor:'#e8eaf0' } }); } catch(e){}
+
+  // Mobile sidebar toggle
+  var sb = document.getElementById('sidebar'),
+      scrim = document.getElementById('scrim'),
+      menuBtn = document.getElementById('menuBtn');
+  function openNav(){ sb.classList.add('open'); scrim.classList.add('open'); }
+  function closeNav(){ sb.classList.remove('open'); scrim.classList.remove('open'); }
+  menuBtn && menuBtn.addEventListener('click', openNav);
+  scrim && scrim.addEventListener('click', closeNav);
+
+  // Close mobile nav after clicking a link; smooth handled by CSS
+  document.querySelectorAll('nav.toc a').forEach(function(a){
+    a.addEventListener('click', function(){ if (window.innerWidth <= 1024) closeNav(); });
+  });
+
+  // Searchable table of contents
+  var search = document.getElementById('navSearch'),
+      links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a')),
+      groups = Array.prototype.slice.call(document.querySelectorAll('nav.toc .grp'));
+  search && search.addEventListener('input', function(){
+    var q = this.value.trim().toLowerCase();
+    links.forEach(function(a){
+      a.classList.toggle('hidden', q !== '' && a.textContent.toLowerCase().indexOf(q) === -1);
+    });
+    // hide group labels that have no visible links after them
+    groups.forEach(function(g){
+      var any=false, n=g.nextElementSibling;
+      while(n && !n.classList.contains('grp')){ if(n.tagName==='A' && !n.classList.contains('hidden')){any=true;break;} n=n.nextElementSibling; }
+      g.style.display = (q==='' || any) ? '' : 'none';
+    });
+  });
+
+  // Active link highlight on scroll + breadcrumb
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section.section'));
+  var crumbs = document.getElementById('crumbs');
+  var byId = {};
+  links.forEach(function(a){ var id=a.getAttribute('href').slice(1); byId[id]=a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        var id = en.target.id, a = byId[id];
+        links.forEach(function(x){ x.classList.remove('active'); });
+        if(a){ a.classList.add('active');
+          var h2 = en.target.querySelector('h2');
+          if(h2 && crumbs) crumbs.textContent = 'Documentation › ' + h2.textContent.replace(/^\s*\d+\s*/,'').trim();
+        }
+      }
+    });
+  }, { rootMargin:'-20% 0px -70% 0px', threshold:0 });
+  sections.forEach(function(s){ obs.observe(s); });
+
+  // Expand / collapse all <details>
+  var allDetails = Array.prototype.slice.call(document.querySelectorAll('details.box'));
+  var eAll = document.getElementById('expandAll'), cAll = document.getElementById('collapseAll');
+  eAll && eAll.addEventListener('click', function(){ allDetails.forEach(function(d){ d.open=true; }); });
+  cAll && cAll.addEventListener('click', function(){ allDetails.forEach(function(d){ d.open=false; }); });
+
+  // Back to top
+  var bt = document.getElementById('backtop');
+  window.addEventListener('scroll', function(){
+    if(window.scrollY > 600) bt.classList.add('show'); else bt.classList.remove('show');
+  });
+  bt && bt.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  // If arriving with a #hash, open any collapsed details that contains it (best-effort)
+  window.addEventListener('hashchange', function(){
+    var el = document.querySelector(location.hash);
+    if(el){ var d = el.closest && el.closest('details.box'); if(d) d.open = true; }
+  });
+</script>
+</body>
+</html>
