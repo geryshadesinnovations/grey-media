@@ -39,6 +39,7 @@ $this->extend('layouts/app');
                 <?php if (empty($live)): ?>
                     <p class="muted">No active sessions.</p>
                 <?php else: ?>
+                <div class="table-wrap">
                 <table class="table">
                     <thead><tr><th>User</th><th>IP</th><th>Currently viewing</th><th>Last activity</th></tr></thead>
                     <tbody>
@@ -52,6 +53,7 @@ $this->extend('layouts/app');
                     <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
                 <?php endif; ?>
             </section>
 

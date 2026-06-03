@@ -39,6 +39,7 @@ $this->extend('layouts/app');
             </form>
         </details>
 
+        <div class="table-wrap">
         <table class="table glass">
             <thead><tr><th>User</th><th>Role</th><th>Sections</th><th>Permissions</th><th>Status</th><th></th></tr></thead>
             <tbody>
@@ -95,5 +96,6 @@ $this->extend('layouts/app');
             <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     </section>
 </div>

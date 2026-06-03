@@ -626,6 +626,17 @@ html[data-theme="light"] select option {
 .dot.ok { background: var(--success); } .dot.off { background: #6b7280; }
 .perm-pills { display: flex; flex-wrap: wrap; gap: 2px; }
 
+/* Mobile overflow fix: let the admin content shrink inside its grid column,
+   and let wide tables scroll horizontally within the content area instead of
+   pushing the whole page wider than the viewport. */
+.admin-content { min-width: 0; }
+.admin-cols > section { min-width: 0; }
+.table-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 720px) {
+  .table-wrap .table { font-size: 13px; }
+  .table-wrap .table .meta { max-width: 220px; }
+}
+
 .create-form { padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
 .create-form summary { cursor: pointer; font-weight: 600; padding: .35rem 0; }
 .create-form .grid-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; align-items: end; margin-top: 1rem; }

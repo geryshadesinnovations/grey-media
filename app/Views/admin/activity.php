@@ -7,6 +7,7 @@ $this->extend('layouts/app');
     <section class="admin-content">
         <h1>Activity log</h1>
         <p class="muted">Last 200 events. Includes uploads, edits, deletes, downloads, logins, and admin actions.</p>
+        <div class="table-wrap">
         <table class="table glass">
             <thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>IP</th><th>Meta</th></tr></thead>
             <tbody>
@@ -22,5 +23,6 @@ $this->extend('layouts/app');
             <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     </section>
 </div>
