@@ -603,7 +603,13 @@ html[data-theme="light"] select option {
 .nav-toggle, .admin-nav-toggle { display: none; }
 
 @media (max-width: 960px) {
+  :root { --gs-drawer-w: min(86vw, 330px); }
   body.drawer-open { overflow: hidden; }
+
+  /* The backdrop dims only the area BESIDE the drawer, never on top of it, so
+     a tap on the menu can never land on the overlay (which would close it).
+     This holds regardless of any ancestor stacking context. */
+  .drawer-overlay { left: var(--gs-drawer-w); }
 
   /* The hamburger button (only rendered on mobile). */
   .admin-nav-toggle, .nav-toggle {
@@ -619,7 +625,7 @@ html[data-theme="light"] select option {
      context (avoids the body-level overlay painting over a nested drawer). */
   .drawer {
     position: fixed !important; top: 0; left: 0; bottom: 0;
-    width: min(86vw, 330px); max-height: none; margin: 0; border-radius: 0;
+    width: var(--gs-drawer-w); max-height: none; margin: 0; border-radius: 0;
     z-index: 1001;
     display: flex !important; flex-direction: column;
     background: var(--bg-1); border: 0; border-right: 1px solid var(--border);
