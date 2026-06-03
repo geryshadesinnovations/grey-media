@@ -83,27 +83,61 @@
 
             // PPTXjs renders asynchronously; hide the loader once slides appear.
             const stage = document.getElementById('ppt-viewer');
+            const wrap = stage.closest('.ppt-viewer-wrap') || stage.parentElement;
+
+            // Scale each fixed-width slide down to fit the container width, so
+            // presentations open fully fitted on mobile (no horizontal scroll).
+            // We capture each slide's natural width once, then use CSS `zoom`
+            // (which reflows the layout box, unlike transform) to fit.
+            const fitSlides = () => {
+                const avail = (wrap ? wrap.clientWidth : stage.clientWidth) - 24;
+                if (avail <= 0) return;
+                stage.querySelectorAll('.slide').forEach((sl) => {
+                    if (!sl.dataset.naturalW) {
+                        sl.style.zoom = '';
+                        sl.dataset.naturalW = String(parseFloat(sl.style.width) || sl.offsetWidth || 960);
+                    }
+                    const nat = parseFloat(sl.dataset.naturalW) || 960;
+                    sl.style.zoom = String(Math.min(1, avail / nat));
+                });
+            };
+            let fitTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(fitTimer);
+                fitTimer = setTimeout(fitSlides, 150);
+            });
+
             const done = () => {
                 if (stage.childElementCount > 0) {
                     if (status && status.parentNode) status.remove();
+                    fitSlides();
                     return true;
                 }
                 return false;
             };
-            if (!done()) {
-                const observer = new MutationObserver(() => { if (done()) observer.disconnect(); });
-                observer.observe(stage, { childList: true, subtree: true });
+            done();
+            // PPTXjs adds slides one-by-one; keep fitting as they appear, and
+            // fit again once rendering settles.
+            let settle = null;
+            const observer = new MutationObserver(() => {
+                if (stage.childElementCount > 0 && status && status.parentNode) status.remove();
+                fitSlides();
+                clearTimeout(settle);
+                settle = setTimeout(fitSlides, 150);
+            });
+            observer.observe(stage, { childList: true, subtree: true });
 
-                // Safety timeout: if nothing rendered, surface a message.
-                setTimeout(() => {
-                    observer.disconnect();
-                    if (stage.childElementCount === 0) {
-                        showMessage('This presentation could not be displayed. If you have permission, you can download the original file instead.');
-                    } else if (status && status.parentNode) {
-                        status.remove();
-                    }
-                }, 20000);
-            }
+            // Safety timeout: if nothing rendered, surface a message; otherwise
+            // stop observing and do a final fit.
+            setTimeout(() => {
+                observer.disconnect();
+                if (stage.childElementCount === 0) {
+                    showMessage('This presentation could not be displayed. If you have permission, you can download the original file instead.');
+                } else {
+                    if (status && status.parentNode) status.remove();
+                    fitSlides();
+                }
+            }, 20000);
         } catch (err) {
             console.warn('[ppt-viewer]', err);
             showMessage('This presentation could not be displayed in your browser. If you have permission, you can download the original file instead.');

@@ -40,20 +40,16 @@ $previewUrl = url('/preview/' . $media['uuid']);
             </div>
 
         <?php elseif ($type === 'pdf'): ?>
-            <div class="pdf-stage">
-                <iframe class="doc-frame"
-                        src="<?= e($streamUrl) ?>#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
-                        title="<?= e($media['title']) ?>"
-                        loading="lazy"></iframe>
+            <div class="doc-viewer-wrap">
+                <div id="doc-viewer" class="doc-viewer" data-src="<?= e($streamUrl) ?>"></div>
+                <div id="doc-status" class="ppt-status"><span class="spinner" aria-hidden="true"></span><span>Loading document…</span></div>
             </div>
 
         <?php elseif ($type === 'ppt'): ?>
             <?php if (!empty($media['preview_path'])): ?>
-            <div class="pdf-stage">
-                <iframe class="doc-frame"
-                        src="<?= e($previewUrl) ?>#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
-                        title="<?= e($media['title']) ?>"
-                        loading="lazy"></iframe>
+            <div class="doc-viewer-wrap">
+                <div id="doc-viewer" class="doc-viewer" data-src="<?= e($previewUrl) ?>"></div>
+                <div id="doc-status" class="ppt-status"><span class="spinner" aria-hidden="true"></span><span>Loading presentation…</span></div>
             </div>
             <?php else: ?>
             <div class="ppt-viewer-wrap">
@@ -127,6 +123,8 @@ $previewUrl = url('/preview/' . $media['uuid']);
 <?php if ($type === 'video'): ?>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" defer></script>
 <script src="<?= asset('js/player.js') ?>" defer></script>
+<?php elseif ($type === 'pdf' || ($type === 'ppt' && !empty($media['preview_path']))): ?>
+<script src="<?= asset('js/doc-viewer.js') ?>" defer></script>
 <?php elseif ($type === 'ppt' && empty($media['preview_path'])): ?>
 <script src="<?= asset('js/ppt-viewer.js') ?>" defer></script>
 <?php endif; ?>
