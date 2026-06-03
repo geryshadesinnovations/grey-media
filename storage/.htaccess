@@ -1,1 +1,3 @@
+# Deny ALL direct access. Media is streamed via PHP only.
+Require all denied
 
