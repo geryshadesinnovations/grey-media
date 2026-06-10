@@ -9,6 +9,7 @@ use App\Core\Csrf;
 use App\Core\Database;
 use App\Core\StreamToken;
 use App\Models\Company;
+use App\Models\Favorite;
 use App\Models\Media;
 use App\Models\Section;
 
@@ -49,6 +50,7 @@ final class MediaController
             'canDownload'  => $this->isDownloadable($m),
             'canEdit'      => Auth::canEdit() || Auth::isSuperAdmin(),
             'canDelete'    => Auth::canDelete() || Auth::isSuperAdmin(),
+            'isFavorite'   => Favorite::isFavorite((int) Auth::id(), (int) $m['id']),
         ]);
     }
 

@@ -1754,3 +1754,35 @@ html[data-theme="light"] .cat-card-section {
     .topbar { padding: .5rem .65rem; gap: .4rem; }
     .topbar-search { margin-top: .35rem; }
 }
+
+
+/* ---------- Favorites ("like") button ----------
+ * Appended so it inherits the existing theme variables. The active (favorited)
+ * state uses the accent colour to stay on-theme with the rest of the UI. */
+.fav-form { margin: 0; display: inline-flex; }
+
+/* Heart on a media card: a circular control overlaying the thumbnail. */
+.fav-btn--card {
+  position: absolute; top: .5rem; right: .5rem; z-index: 3;
+  width: 36px; height: 36px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; cursor: pointer;
+  background: rgba(10, 12, 20, .55); color: #fff;
+  border: 1px solid rgba(255, 255, 255, .18);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  transition: transform var(--speed), background var(--speed), color var(--speed), border-color var(--speed);
+}
+.fav-btn--card svg { width: 18px; height: 18px; }
+.fav-btn--card:hover { transform: scale(1.08); background: rgba(10, 12, 20, .72); }
+.fav-btn--card.is-fav { color: var(--accent); border-color: rgba(167, 139, 250, .55); }
+
+/* Heart on the media detail page: styled like the other ghost actions. */
+.fav-btn--detail { cursor: pointer; }
+.fav-btn--detail svg { transition: transform var(--speed); }
+.fav-btn.is-fav svg { fill: currentColor; }
+.fav-btn--detail.is-fav { color: var(--accent); border-color: rgba(167, 139, 250, .45); }
+.fav-btn:active svg { transform: scale(.85); }
+
+/* Favorites page wrapper (no sidebar; uses the full content width). */
+.favorites-page { width: 100%; }
+.favorites-page .content-header h2 { display: inline-flex; align-items: center; gap: .5rem; }

@@ -327,6 +327,25 @@ CREATE TABLE `stream_tokens` (
     CONSTRAINT `fk_st_media` FOREIGN KEY (`media_id`) REFERENCES `media`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------------------------------------------------------------------
+-- FAVORITES  (per-user "likes" - one row per user/media pair)
+-- A user can favorite any media item (video/image/pdf/ppt). Favorites are
+-- strictly personal: only the owning user ever sees their own collection.
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `favorites`;
+CREATE TABLE `favorites` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`    INT UNSIGNED NOT NULL,
+    `media_id`   BIGINT UNSIGNED NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_fav_user_media` (`user_id`,`media_id`),
+    KEY `idx_fav_user` (`user_id`),
+    KEY `idx_fav_media` (`media_id`),
+    CONSTRAINT `fk_fav_user`  FOREIGN KEY (`user_id`)  REFERENCES `users`(`id`)  ON DELETE CASCADE,
+    CONSTRAINT `fk_fav_media` FOREIGN KEY (`media_id`) REFERENCES `media`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS `failed_logins`;
 CREATE TABLE `failed_logins` (
     `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Models\Category;
 use App\Models\Company;
+use App\Models\Favorite;
 use App\Models\Media;
 use App\Models\Occasion;
 use App\Models\Section;
@@ -45,6 +46,7 @@ final class DashboardController
             'sort'         => $sort,
             'mediaTypes'   => ['video' => 'Videos', 'image' => 'Images', 'pdf' => 'PDFs', 'ppt' => 'Presentations'],
             'companies'    => Company::all(),
+            'favIds'       => Favorite::idsForUser((int) Auth::id()),
         ]);
     }
 

@@ -7,6 +7,7 @@
  * @var bool $canDownload
  * @var bool $canEdit
  * @var bool $canDelete
+ * @var bool $isFavorite
  */
 use App\Core\Csrf;
 $this->extend('layouts/app');
@@ -94,6 +95,21 @@ $previewUrl = url('/preview/' . $media['uuid']);
         <?php endif; ?>
 
         <div class="info-actions">
+            <?php /* Favorite ("like") toggle - works for every media type.
+                   JS intercepts the click and POSTs to /favorites/toggle; the
+                   <noscript>-friendly form fallback below still works without JS. */ ?>
+            <form method="post" action="<?= url('/favorites/toggle/' . $media['uuid']) ?>" class="fav-form">
+                <?= Csrf::field() ?>
+                <button type="submit"
+                        class="btn-ghost fav-btn fav-btn--detail <?= $isFavorite ? 'is-fav' : '' ?>"
+                        data-fav-toggle
+                        data-fav-action="<?= e(url('/favorites/toggle/' . $media['uuid'])) ?>"
+                        aria-pressed="<?= $isFavorite ? 'true' : 'false' ?>">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+                    <span class="fav-label"><?= $isFavorite ? 'Favorited' : 'Favorite' ?></span>
+                </button>
+            </form>
+
             <?php /* Download button only shows when 'Allow Download' was
                    checked at upload time. SuperAdmins can still hit the
                    /download/{uuid} route directly if needed for moderation,

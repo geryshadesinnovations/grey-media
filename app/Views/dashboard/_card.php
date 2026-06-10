@@ -9,10 +9,20 @@ $icon = match ($type) {
     default => 'M3 7h18v10H3z',
 };
 $dur = format_duration($m['duration_sec'] ?? null);
+$isFav = in_array((int) $m['id'], $favIds ?? [], true);
 ?>
 <a class="media-card" href="<?= url('/media/' . $m['uuid']) ?>" data-type="<?= e($type) ?>"<?php if ($type === 'video'): ?> data-preview-src="<?= url('/stream/' . $m['uuid'] . '?token=' . \App\Core\StreamToken::issue((int)$m['id'])) ?>"<?php endif; ?>>
     <div class="media-thumb">
         <img loading="lazy" src="<?= url('/thumb/' . $m['uuid']) ?>" alt="<?= e($m['title']) ?>">
+        <button type="button"
+                class="fav-btn fav-btn--card <?= $isFav ? 'is-fav' : '' ?>"
+                data-fav-toggle
+                data-fav-action="<?= e(url('/favorites/toggle/' . $m['uuid'])) ?>"
+                aria-pressed="<?= $isFav ? 'true' : 'false' ?>"
+                aria-label="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>"
+                title="<?= $isFav ? 'Remove from favorites' : 'Add to favorites' ?>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        </button>
         <?php if ($type === 'video'): ?>
         <div class="play-overlay">
             <svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>

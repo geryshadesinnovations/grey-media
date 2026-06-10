@@ -38,6 +38,9 @@ $theme = $_COOKIE['theme'] ?? 'dark';
         <button class="icon-btn" id="theme-toggle" type="button" title="Toggle theme">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
         </button>
+        <a class="icon-btn" href="<?= url('/favorites') ?>" title="My Favorites" aria-label="My Favorites">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        </a>
         <?php if (Auth::canUpload()): ?>
         <a class="btn-primary" href="<?= url('/upload') ?>">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -55,7 +58,9 @@ $theme = $_COOKIE['theme'] ?? 'dark';
                     <small><?= e($user['username'] ?? '') ?></small>
                     <small class="role-badge"><?= e($user['role_name'] ?? $user['role_code']) ?></small>
                 </div>
+                <a href="<?= url('/favorites') ?>">My Favorites</a>
                 <?php if (Auth::isSuperAdmin() || Auth::canManageUsers()): ?>
+                <hr>
                 <a href="<?= url('/admin') ?>">Admin Dashboard</a>
                 <a href="<?= url('/admin/users') ?>">Users</a>
                 <a href="<?= url('/admin/categories') ?>">Categories</a>

@@ -249,6 +249,16 @@ final class Media
             $where[] = "m.uploaded_by = ?";
             $params[] = (int) $filters['uploader_id'];
         }
+        if (!empty($filters['favorite_user_id'])) {
+            // Restrict to media the given user has favorited. Combined with the
+            // section-visibility rule above, a user only ever sees their own
+            // favorites that they are still allowed to access.
+            $where[] = "EXISTS (
+                SELECT 1 FROM favorites fv
+                WHERE fv.media_id = m.id AND fv.user_id = ?
+            )";
+            $params[] = (int) $filters['favorite_user_id'];
+        }
         if (!empty($filters['featured'])) {
             $where[] = "m.is_featured = 1";
         }

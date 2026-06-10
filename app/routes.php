@@ -9,6 +9,7 @@ declare(strict_types=1);
 use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
+use App\Controllers\FavoritesController;
 use App\Controllers\MediaController;
 use App\Controllers\SearchController;
 use App\Controllers\StreamController;
@@ -24,6 +25,8 @@ $router->post('/logout',  [AuthController::class, 'logout'], [RequireAuth::class
 
 // Authenticated dashboard / media browsing
 $router->get('/dashboard',         [DashboardController::class, 'index'],   [RequireAuth::class]);
+$router->get('/favorites',         [FavoritesController::class, 'index'],   [RequireAuth::class]);
+$router->post('/favorites/toggle/{uuid}', [FavoritesController::class, 'toggle'], [RequireAuth::class]);
 $router->get('/search/suggest',    [SearchController::class, 'suggest'],    [RequireAuth::class]);
 $router->get('/media/{uuid}',      [MediaController::class, 'show'],        [RequireAuth::class]);
 $router->get('/media/{id}/edit',   [MediaController::class, 'edit'],        [RequireAuth::class]);

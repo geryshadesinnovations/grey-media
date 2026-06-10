@@ -213,6 +213,7 @@
         } else {
             // ---- Mobile: tap a video card to start preview, tap elsewhere to stop
             document.addEventListener('touchstart', (e) => {
+                if (e.target.closest('[data-fav-toggle]')) return; // let the heart handle its own tap
                 const card = e.target.closest('.media-card[data-preview-src]');
                 if (card) {
                     if (!active || active.card !== card) startPreview(card);
@@ -221,5 +222,71 @@
                 }
             }, { passive: true });
         }
+    })();
+
+    // ---- Favorites ("like") toggle -------------------------------------------
+    // A heart button appears on each media card (overlaying the thumbnail) and
+    // on the media detail page. Clicking it POSTs to /favorites/toggle/{uuid}
+    // and flips the button state without a page reload. On cards the button
+    // lives inside the card's <a>, so we intercept in the capture phase and
+    // stop the click from navigating.
+    (() => {
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
+        const onFavPage = !!document.querySelector('[data-favorites-page]');
+
+        const setState = (btn, favorited) => {
+            btn.classList.toggle('is-fav', favorited);
+            btn.setAttribute('aria-pressed', favorited ? 'true' : 'false');
+            const label = btn.querySelector('.fav-label');
+            if (label) label.textContent = favorited ? 'Favorited' : 'Favorite';
+            const title = favorited ? 'Remove from favorites' : 'Add to favorites';
+            if (!label) { btn.setAttribute('aria-label', title); btn.setAttribute('title', title); }
+        };
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-fav-toggle]');
+            if (!btn) return;
+
+            // Never let the click bubble to the card link / form.
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (btn.dataset.busy === '1') return;
+            const action = btn.dataset.favAction;
+            if (!action) return;
+
+            btn.dataset.busy = '1';
+            fetch(action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(data => {
+                    if (!data || data.ok !== true) return;
+                    setState(btn, data.favorited);
+                    // On the Favorites page, removing a favorite drops the card.
+                    if (onFavPage && data.favorited === false) {
+                        const card = btn.closest('.media-card');
+                        if (card) {
+                            card.style.transition = 'opacity .2s ease';
+                            card.style.opacity = '0';
+                            setTimeout(() => card.remove(), 200);
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Fallback: if the AJAX call fails, submit the surrounding
+                    // form (full page reload) so the action still completes.
+                    const form = btn.closest('form.fav-form');
+                    if (form) form.submit();
+                })
+                .finally(() => { btn.dataset.busy = '0'; });
+        }, true); // capture phase: beat the <a> navigation / form submit
     })();
 })();
