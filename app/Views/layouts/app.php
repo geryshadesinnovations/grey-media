@@ -52,7 +52,7 @@ $theme = $_COOKIE['theme'] ?? 'dark';
             <div class="popover" id="user-popover" hidden>
                 <div class="popover-header">
                     <div><?= e($user['name']) ?></div>
-                    <small><?= e($user['email']) ?></small>
+                    <small><?= e($user['username'] ?? '') ?></small>
                     <small class="role-badge"><?= e($user['role_name'] ?? $user['role_code']) ?></small>
                 </div>
                 <?php if (Auth::isSuperAdmin() || Auth::canManageUsers()): ?>

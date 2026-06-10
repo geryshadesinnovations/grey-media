@@ -1,8 +1,9 @@
 -- =====================================================================
 -- Greyshades Innovations - Seed Data
 -- Run AFTER schema.sql.
--- Default super admin:  email: admin@greyshades.local  password: Admin@12345
+-- Default super admin:  username: admin   password: Admin@12345
 -- (Hash is bcrypt of "Admin@12345" - change immediately after first login.)
+-- Usernames are letters + numbers only (e.g. GSIPL01, GSIPL02).
 -- =====================================================================
 USE `greyshades_media`;
 
@@ -50,12 +51,12 @@ ON p.code IN ('media.view','section.graphics','section.events')
 WHERE r.code='combined_user';
 
 -- ---------- DEFAULT SUPER ADMIN ----------
--- Bcrypt hash for "Admin@12345"
+-- Bcrypt hash for "Admin@12345". Logs in with username "admin".
 INSERT INTO `users`
-  (`name`,`email`,`password_hash`,`role_id`,`can_graphics`,`can_events`,
+  (`name`,`username`,`email`,`password_hash`,`role_id`,`can_graphics`,`can_events`,
    `can_upload`,`can_edit`,`can_delete`,`can_download`,`can_manage_users`,`is_active`)
 VALUES
-  ('Super Admin','admin@greyshades.local',
+  ('Super Admin','admin','admin@greyshades.local',
    '$2y$10$HIYrGJM3Rsyu.6ezAUPgQu5zFaNFLWJxwJLxI9rRwg8viKq96IWIS',
    (SELECT id FROM `roles` WHERE code='super_admin'),
    1,1,1,1,1,1,1,1);

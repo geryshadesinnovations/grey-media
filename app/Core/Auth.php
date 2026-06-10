@@ -23,19 +23,19 @@ final class Auth
         return self::user() !== null;
     }
 
-    public static function attempt(string $email, string $password): bool
+    public static function attempt(string $username, string $password): bool
     {
         $row = Database::first(
             "SELECT u.*, r.code AS role_code FROM users u
              JOIN roles r ON r.id = u.role_id
-             WHERE u.email = ? AND u.is_active = 1 LIMIT 1",
-            [$email]
+             WHERE u.username = ? AND u.is_active = 1 LIMIT 1",
+            [$username]
         );
 
         if (!$row || !password_verify($password, (string) $row['password_hash'])) {
             Database::execute(
-                "INSERT INTO failed_logins (email, ip_address) VALUES (?, ?)",
-                [$email, client_ip()]
+                "INSERT INTO failed_logins (username, ip_address) VALUES (?, ?)",
+                [$username, client_ip()]
             );
             return false;
         }
@@ -67,7 +67,7 @@ final class Auth
             [session_id(), $row['id'], client_ip(), substr(ua(), 0, 500)]
         );
 
-        ActivityLog::record('login', null, null, ['email' => $email]);
+        ActivityLog::record('login', null, null, ['username' => $username]);
         return true;
     }
 

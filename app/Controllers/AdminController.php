@@ -24,7 +24,7 @@ final class AdminController
              ORDER BY a.id DESC LIMIT 30"
         );
         $live = Database::all(
-            "SELECT us.*, u.name, u.email, m.title AS media_title, m.uuid AS media_uuid
+            "SELECT us.*, u.name, u.username, m.title AS media_title, m.uuid AS media_uuid
              FROM user_sessions us
              JOIN users u ON u.id = us.user_id
              LEFT JOIN media m ON m.id = us.current_media_id
@@ -52,16 +52,16 @@ final class AdminController
     public function userStore(): void
     {
         Csrf::verifyOrFail();
-        $email = trim((string) ($_POST['email'] ?? ''));
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            flash('error', 'Invalid email.'); redirect('/admin/users');
+        $username = trim((string) ($_POST['username'] ?? ''));
+        if (!User::isValidUsername($username)) {
+            flash('error', 'Username must be 3-64 characters, letters and numbers only.'); redirect('/admin/users');
         }
-        if (Database::scalar("SELECT 1 FROM users WHERE email = ?", [$email])) {
-            flash('error', 'A user with this email already exists.'); redirect('/admin/users');
+        if (User::usernameExists($username)) {
+            flash('error', 'A user with this username already exists.'); redirect('/admin/users');
         }
         $id = User::create([
             'name'             => trim((string) ($_POST['name'] ?? '')),
-            'email'            => $email,
+            'username'         => $username,
             'password'         => (string) ($_POST['password'] ?? ''),
             'role_id'          => (int) ($_POST['role_id'] ?? 0),
             'can_graphics'     => !empty($_POST['can_graphics']),
@@ -82,9 +82,16 @@ final class AdminController
     {
         Csrf::verifyOrFail();
         if (!User::find($id)) { http_response_code(404); return; }
+        $username = trim((string) ($_POST['username'] ?? ''));
+        if (!User::isValidUsername($username)) {
+            flash('error', 'Username must be 3-64 characters, letters and numbers only.'); redirect('/admin/users');
+        }
+        if (User::usernameExists($username, $id)) {
+            flash('error', 'A user with this username already exists.'); redirect('/admin/users');
+        }
         User::update($id, [
             'name'             => $_POST['name'] ?? null,
-            'email'            => $_POST['email'] ?? null,
+            'username'         => $username,
             'role_id'          => (int) ($_POST['role_id'] ?? 0),
             'can_graphics'     => !empty($_POST['can_graphics']),
             'can_events'       => !empty($_POST['can_events']),
@@ -154,7 +161,7 @@ final class AdminController
     public function activity(): void
     {
         $rows = Database::all(
-            "SELECT a.*, u.name AS user_name, u.email AS user_email
+            "SELECT a.*, u.name AS user_name, u.username AS user_username
              FROM activity_logs a LEFT JOIN users u ON u.id = a.user_id
              ORDER BY a.id DESC LIMIT 200"
         );

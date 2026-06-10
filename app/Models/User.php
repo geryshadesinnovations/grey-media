@@ -30,15 +30,41 @@ final class User
         return Database::all("SELECT * FROM roles ORDER BY id");
     }
 
+    /**
+     * Usernames are the login identifier: letters and numbers only, 3-64 chars.
+     */
+    public static function isValidUsername(string $username): bool
+    {
+        return (bool) preg_match('/^[A-Za-z0-9]{3,64}$/', $username);
+    }
+
+    /**
+     * True when the username is already taken (case-insensitive), optionally
+     * ignoring a given user id (used when editing an existing user).
+     */
+    public static function usernameExists(string $username, ?int $exceptId = null): bool
+    {
+        if ($exceptId !== null) {
+            return (bool) Database::scalar(
+                "SELECT 1 FROM users WHERE username = ? AND id <> ? LIMIT 1",
+                [$username, $exceptId]
+            );
+        }
+        return (bool) Database::scalar(
+            "SELECT 1 FROM users WHERE username = ? LIMIT 1",
+            [$username]
+        );
+    }
+
     public static function create(array $data): int
     {
         Database::execute(
             "INSERT INTO users
-             (name, email, password_hash, role_id,
+             (name, username, email, password_hash, role_id,
               can_graphics, can_events, can_upload, can_edit, can_delete, can_download, can_manage_users, is_active)
-             VALUES (?,?,?,?, ?,?,?,?,?,?,?, ?)",
+             VALUES (?,?,?,?,?, ?,?,?,?,?,?,?, ?)",
             [
-                $data['name'], $data['email'],
+                $data['name'], $data['username'], $data['email'] ?? null,
                 password_hash((string) $data['password'], PASSWORD_BCRYPT),
                 (int) $data['role_id'],
                 (int) ($data['can_graphics']     ?? 0),
@@ -58,7 +84,7 @@ final class User
     {
         $sets = []; $params = [];
         foreach ([
-            'name','email','role_id','can_graphics','can_events',
+            'name','username','email','role_id','can_graphics','can_events',
             'can_upload','can_edit','can_delete','can_download','can_manage_users','is_active'
         ] as $k) {
             if (array_key_exists($k, $data)) {

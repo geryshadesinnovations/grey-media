@@ -236,7 +236,7 @@
       <h3>Main features</h3>
       <div class="tablewrap"><table>
         <tr><th>Feature</th><th>What it means for a normal user</th></tr>
-        <tr><td>Secure login</td><td>Only invited staff with an email + password can enter. Too many wrong tries are blocked.</td></tr>
+        <tr><td>Secure login</td><td>Only invited staff with a username + password can enter. Too many wrong tries are blocked.</td></tr>
         <tr><td>Dashboard &amp; search</td><td>A Pinterest-style grid of media with filters (section, category, type, company) and a smart search box.</td></tr>
         <tr><td>Categories &amp; occasions</td><td>Files are filed under nested categories (e.g. <i>Art → Videos → Invitation Videos</i>) and tagged with occasions (e.g. <i>Diwali</i>).</td></tr>
         <tr><td>Upload</td><td>Drag-and-drop upload with a progress bar; the same file is never stored twice.</td></tr>
@@ -955,7 +955,7 @@ erDiagram
         <div class="tablewrap"><table>
           <tr><th>Column</th><th>Meaning</th></tr>
           <tr><td><code>id</code></td><td>Unique number for each user.</td></tr>
-          <tr><td><code>name, email</code></td><td>Display name and login email (email is unique).</td></tr>
+          <tr><td><code>name, username</code></td><td>Display name and unique login username (letters &amp; numbers only). An optional <code>email</code> may also be stored.</td></tr>
           <tr><td><code>password_hash</code></td><td>The password stored <i>scrambled</i> (bcrypt) — never in plain text.</td></tr>
           <tr><td><code>role_id</code></td><td>Points to a row in <code>roles</code>.</td></tr>
           <tr><td><code>can_graphics, can_events</code></td><td>Section access switches.</td></tr>
@@ -963,7 +963,7 @@ erDiagram
           <tr><td><code>is_active</code></td><td>0 = deactivated (can't log in).</td></tr>
           <tr><td><code>last_login_at, last_login_ip, created_at, updated_at</code></td><td>Bookkeeping.</td></tr>
         </table></div>
-        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", email: "admin@greyshades.local", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
+        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", username: "admin", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
       </div></details>
 
       <details class="box"><summary>roles &amp; permissions — what each role means</summary><div class="body">

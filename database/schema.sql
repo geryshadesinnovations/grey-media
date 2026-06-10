@@ -47,7 +47,8 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
     `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`            VARCHAR(120) NOT NULL,
-    `email`           VARCHAR(190) NOT NULL,
+    `username`        VARCHAR(64) NOT NULL COMMENT 'Login identifier - letters & numbers only',
+    `email`           VARCHAR(190) NULL,
     `password_hash`   VARCHAR(255) NOT NULL,
     `role_id`         INT UNSIGNED NOT NULL,
     `can_graphics`    TINYINT(1) NOT NULL DEFAULT 0,
@@ -63,7 +64,7 @@ CREATE TABLE `users` (
     `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uq_users_email` (`email`),
+    UNIQUE KEY `uq_users_username` (`username`),
     KEY `idx_users_role` (`role_id`),
     KEY `idx_users_active` (`is_active`),
     CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`)
@@ -330,11 +331,11 @@ CREATE TABLE `stream_tokens` (
 DROP TABLE IF EXISTS `failed_logins`;
 CREATE TABLE `failed_logins` (
     `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `email`      VARCHAR(190) NOT NULL,
+    `username`   VARCHAR(190) NOT NULL,
     `ip_address` VARCHAR(45) NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    KEY `idx_fl_email` (`email`),
+    KEY `idx_fl_username` (`username`),
     KEY `idx_fl_ip` (`ip_address`),
     KEY `idx_fl_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

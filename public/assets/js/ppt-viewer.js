@@ -97,12 +97,14 @@
             // ---- Presentation state ------------------------------------------------
             let holders = [];     // one .ppt-slide-holder per slide (direct children)
             let current = 0;      // index of the visible slide
-            let nav = null, prevBtn = null, nextBtn = null, counter = null;
+            let nav = null, prevBtn = null, nextBtn = null, counter = null, fsBtn = null;
 
-            const arrow = (dir) =>
-                dir === 'left'
-                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'
-                    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+            const ICON = {
+                left:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+                right: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+                enter: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>',
+                exit:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3m13-5h-3a2 2 0 0 0-2 2v3"/></svg>',
+            };
 
             const onKey = (e) => {
                 if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
@@ -110,15 +112,46 @@
                 else if (e.key === 'ArrowRight' || e.key === 'PageDown') { go(current + 1); }
             };
 
+            // ---- Fullscreen --------------------------------------------------------
+            const fsEnabled = !!(wrap.requestFullscreen || wrap.webkitRequestFullscreen);
+            const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+            const inFullscreen = () => fsElement() === wrap;
+
+            const toggleFullscreen = () => {
+                if (inFullscreen()) {
+                    (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
+                } else {
+                    (wrap.requestFullscreen || wrap.webkitRequestFullscreen || (() => {})).call(wrap);
+                }
+            };
+
+            const updateFsBtn = () => {
+                if (!fsBtn) return;
+                const on = inFullscreen();
+                fsBtn.innerHTML = (on ? ICON.exit : ICON.enter) +
+                    '<span class="ppt-label">' + (on ? 'Exit' : 'Fullscreen') + '</span>';
+                fsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'View fullscreen');
+            };
+
+            const onFsChange = () => {
+                wrap.classList.toggle('is-fullscreen', inFullscreen());
+                updateFsBtn();
+                // The stage size changes after the transition; re-fit shortly after.
+                setTimeout(() => fit(holders[current]), 80);
+            };
+
             const buildNav = () => {
                 if (nav) return;
                 nav = document.createElement('div');
                 nav.className = 'ppt-nav';
 
+                const center = document.createElement('div');
+                center.className = 'ppt-center';
+
                 prevBtn = document.createElement('button');
                 prevBtn.type = 'button';
                 prevBtn.setAttribute('aria-label', 'Previous slide');
-                prevBtn.innerHTML = arrow('left') + '<span>Previous</span>';
+                prevBtn.innerHTML = ICON.left + '<span class="ppt-label">Previous</span>';
 
                 counter = document.createElement('span');
                 counter.className = 'ppt-count';
@@ -126,9 +159,22 @@
                 nextBtn = document.createElement('button');
                 nextBtn.type = 'button';
                 nextBtn.setAttribute('aria-label', 'Next slide');
-                nextBtn.innerHTML = '<span>Next</span>' + arrow('right');
+                nextBtn.innerHTML = '<span class="ppt-label">Next</span>' + ICON.right;
 
-                nav.append(prevBtn, counter, nextBtn);
+                center.append(prevBtn, counter, nextBtn);
+                nav.append(center);
+
+                if (fsEnabled) {
+                    fsBtn = document.createElement('button');
+                    fsBtn.type = 'button';
+                    fsBtn.className = 'ppt-fs';
+                    nav.append(fsBtn);
+                    updateFsBtn();
+                    fsBtn.addEventListener('click', toggleFullscreen);
+                    document.addEventListener('fullscreenchange', onFsChange);
+                    document.addEventListener('webkitfullscreenchange', onFsChange);
+                }
+
                 wrap.insertBefore(nav, stage);
 
                 prevBtn.addEventListener('click', () => go(current - 1));
