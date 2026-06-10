@@ -48,7 +48,6 @@ CREATE TABLE `users` (
     `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`            VARCHAR(120) NOT NULL,
     `username`        VARCHAR(64) NOT NULL COMMENT 'Login identifier - letters & numbers only',
-    `email`           VARCHAR(190) NULL,
     `password_hash`   VARCHAR(255) NOT NULL,
     `role_id`         INT UNSIGNED NOT NULL,
     `can_graphics`    TINYINT(1) NOT NULL DEFAULT 0,

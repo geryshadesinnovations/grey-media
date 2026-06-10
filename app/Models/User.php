@@ -60,11 +60,11 @@ final class User
     {
         Database::execute(
             "INSERT INTO users
-             (name, username, email, password_hash, role_id,
+             (name, username, password_hash, role_id,
               can_graphics, can_events, can_upload, can_edit, can_delete, can_download, can_manage_users, is_active)
-             VALUES (?,?,?,?,?, ?,?,?,?,?,?,?, ?)",
+             VALUES (?,?,?,?, ?,?,?,?,?,?,?, ?)",
             [
-                $data['name'], $data['username'], $data['email'] ?? null,
+                $data['name'], $data['username'],
                 password_hash((string) $data['password'], PASSWORD_BCRYPT),
                 (int) $data['role_id'],
                 (int) ($data['can_graphics']     ?? 0),
@@ -84,7 +84,7 @@ final class User
     {
         $sets = []; $params = [];
         foreach ([
-            'name','username','email','role_id','can_graphics','can_events',
+            'name','username','role_id','can_graphics','can_events',
             'can_upload','can_edit','can_delete','can_download','can_manage_users','is_active'
         ] as $k) {
             if (array_key_exists($k, $data)) {
