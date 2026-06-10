@@ -472,23 +472,53 @@ html[data-theme="light"] select option {
 .ppt-stage { padding: 1.5rem; text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
 .ppt-stage img { max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); }
 
-/* In-browser PPTX viewer (client-side render when no server PDF exists) */
-.ppt-viewer-wrap { width: 100%; max-height: 82vh; overflow: auto; background: var(--surface-strong); padding: 1rem 1rem 2.5rem; }
-/* PPTXjs sets an explicit height/position on the host and its slides which can
-   clip the final slide. Force the host to grow with its content and let the
-   slides flow normally so every slide renders in full. */
-.pptx-host { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+/* In-browser PPTX viewer (client-side render when no server PDF exists).
+   Shows one slide at a time with Previous/Next navigation, each slide scaled
+   to fit the stage so a presentation never overflows on small screens. */
+.ppt-viewer-wrap { position: relative; width: 100%; height: 82vh; min-height: 480px; display: flex; flex-direction: column; background: var(--surface-strong); }
+
+/* Navigation toolbar: Previous / Next + slide counter. */
+.ppt-nav { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: .6rem; padding: .5rem .6rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+.ppt-nav button { display: inline-flex; align-items: center; gap: .35rem; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: .4rem .85rem; min-height: 34px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ppt-nav button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+.ppt-nav button:disabled { opacity: .4; cursor: default; }
+.ppt-nav .ppt-count { font-size: 13px; color: var(--text-muted); min-width: 80px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Stage that holds the single visible slide, centered and scroll-safe. The
+   `!important` height keeps PPTXjs from forcing a fixed host height. */
+.pptx-host { flex: 1 1 auto; display: grid; place-items: center; overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px; min-height: 0 !important; height: auto !important; }
+
+/* Restore PPTXjs's expected box model (the global `box-sizing: border-box` and
+   `img { max-width:100% }` rules otherwise shrink every text box and image,
+   making the authored text wrap, shift, and overlap). With content-box the
+   text lands exactly where PowerPoint placed it. */
+.pptx-host, .pptx-host * { box-sizing: content-box; }
+.pptx-host img { max-width: none; }
+
+/* Each slide is wrapped in a holder sized to the slide's scaled dimensions, so
+   the centered layout reserves exactly the right space (no overflow, no gap).
+   The slide itself is pinned at the holder's origin and scaled via transform
+   (uniform scaling = no distortion). */
+.ppt-slide-holder { position: relative; margin: auto; }
 .pptx-host .slide {
-    position: relative !important;
-    top: auto !important; left: auto !important;
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
     float: none !important;
-    display: block;
-    margin: 0 auto 1rem !important;
+    margin: 0 !important;
+    transform-origin: top left;
+    background: #fff;
     box-shadow: var(--shadow-md); border-radius: 4px;
 }
 .pptx-host .divs2slidesjs,
-.pptx-host > div:not(.slide) { height: auto !important; overflow: visible !important; }
-.ppt-status { display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 2rem; color: var(--text-muted); text-align: center; }
+.pptx-host > div:not(.slide):not(.ppt-slide-holder) { height: auto !important; overflow: visible !important; }
+
+@media (max-width: 700px) {
+  .ppt-viewer-wrap { height: 84vh; min-height: 0; }
+  .pptx-host { padding: 8px 6px; }
+  .ppt-nav button { padding: .4rem .6rem; }
+  .ppt-nav .ppt-count { min-width: 64px; }
+}
+.ppt-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 2rem; color: var(--text-muted); text-align: center; }
 .ppt-status.ppt-status-error { color: var(--text); }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: gs-spin .8s linear infinite; }
 @keyframes gs-spin { to { transform: rotate(360deg); } }
