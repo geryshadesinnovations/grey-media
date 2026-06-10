@@ -744,7 +744,7 @@ html[data-theme="light"] select option {
 .table th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); font-weight: 700; }
 .table tr:last-child td { border-bottom: 0; }
 .table code { background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-.table .meta { white-space: pre-wrap; word-break: break-word; max-width: 380px; font-size: 12px; color: var(--text-muted); margin: 0; }
+.table .meta { white-space: pre-wrap; max-width: 380px; font-size: 12px; color: var(--text-muted); margin: 0; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .dot.ok { background: var(--success); } .dot.off { background: #6b7280; }
 .perm-pills { display: flex; flex-wrap: wrap; gap: 2px; }
