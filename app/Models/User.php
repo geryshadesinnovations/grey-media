@@ -31,6 +31,21 @@ final class User
     }
 
     /**
+     * Active users who can review download requests: super admins, plus anyone
+     * with the can_manage_users flag.
+     *
+     * @return array<int,int>
+     */
+    public static function adminIds(): array
+    {
+        $rows = Database::all(
+            "SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
+             WHERE u.is_active = 1 AND (r.code = 'super_admin' OR u.can_manage_users = 1)"
+        );
+        return array_map(static fn ($r) => (int) $r['id'], $rows);
+    }
+
+    /**
      * Usernames are the login identifier: letters and numbers only, 3-64 chars.
      */
     public static function isValidUsername(string $username): bool

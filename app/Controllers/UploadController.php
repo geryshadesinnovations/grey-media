@@ -8,8 +8,10 @@ use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\Database;
 use App\Models\Category;
+use App\Models\CategoryFollow;
 use App\Models\Company;
 use App\Models\Media;
+use App\Models\Notification;
 use App\Models\Section;
 use App\Services\MediaProcessor;
 
@@ -211,6 +213,22 @@ final class UploadController
         ActivityLog::record('media.upload', 'media', $mediaId, [
             'title' => $title, 'mime' => $mime, 'size' => filesize($absPath),
         ]);
+
+        // Notify users who follow any of the (expanded) categories this upload
+        // landed in - except the uploader themselves.
+        $followerIds = array_values(array_filter(
+            CategoryFollow::followerUserIds(array_keys($expandedCatIds)),
+            fn ($uid) => $uid !== (int) Auth::id()
+        ));
+        if ($followerIds) {
+            Notification::createMany(
+                $followerIds,
+                'upload',
+                'New upload in a category you follow',
+                '"' . $title . '" was just added.',
+                url('/media/' . $uuid)
+            );
+        }
 
         $this->jsonOk([
             'duplicate' => false,

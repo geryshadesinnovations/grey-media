@@ -289,4 +289,166 @@
                 .finally(() => { btn.dataset.busy = '0'; });
         }, true); // capture phase: beat the <a> navigation / form submit
     })();
+
+    // ---- Follow / unfollow a category ----------------------------------------
+    (() => {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = meta ? meta.getAttribute('content') : '';
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-follow-toggle]');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (btn.dataset.busy === '1') return;
+            const action = btn.dataset.followAction;
+            if (!action) return;
+            btn.dataset.busy = '1';
+            fetch(action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(d => {
+                    if (!d || d.ok !== true) return;
+                    btn.classList.toggle('is-following', d.following);
+                    btn.setAttribute('aria-pressed', d.following ? 'true' : 'false');
+                    const lbl = btn.querySelector('.follow-label');
+                    if (lbl) lbl.textContent = d.following ? 'Following' : 'Follow';
+                })
+                .catch(() => {})
+                .finally(() => { btn.dataset.busy = '0'; });
+        }, true);
+    })();
+
+    // ---- Share link generation (media detail) --------------------------------
+    (() => {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = meta ? meta.getAttribute('content') : '';
+
+        document.querySelectorAll('[data-share-form]').forEach((form) => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const box = form.closest('.share-box');
+                const result = box && box.querySelector('[data-share-result]');
+                const linkInput = box && box.querySelector('[data-share-link]');
+                const expiry = box && box.querySelector('[data-share-expiry]');
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn) btn.disabled = true;
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                })
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
+                    .then(d => {
+                        if (!d || d.ok !== true) throw new Error('share failed');
+                        if (linkInput) linkInput.value = d.url;
+                        if (expiry) expiry.textContent = d.expires_human ? 'Expires ' + d.expires_human : '';
+                        if (result) result.hidden = false;
+                        if (linkInput) { linkInput.focus(); linkInput.select(); }
+                    })
+                    .catch(() => { form.submit(); })
+                    .finally(() => { if (btn) btn.disabled = false; });
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('[data-share-copy]');
+            if (!copyBtn) return;
+            const box = copyBtn.closest('.share-box');
+            const input = box && box.querySelector('[data-share-link]');
+            if (!input || !input.value) return;
+            const done = () => {
+                const t = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => { copyBtn.textContent = t; }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(input.value).then(done).catch(() => { input.select(); try { document.execCommand('copy'); } catch (_) {} done(); });
+            } else {
+                input.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                done();
+            }
+        });
+    })();
+
+    // ---- Notification bell ---------------------------------------------------
+    (() => {
+        const bell = document.getElementById('notif-bell');
+        const list = document.getElementById('notif-pop-list');
+        const badge = document.getElementById('notif-badge');
+        if (!bell || !list) return;
+
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = meta ? meta.getAttribute('content') : '';
+        const feedUrl = list.dataset.feedUrl;
+        const readAllUrl = list.dataset.readAllUrl;
+        const baseUrl = readAllUrl ? readAllUrl.replace(/\/read-all$/, '') : '';
+
+        const setBadge = (n) => {
+            if (!badge) return;
+            if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.hidden = false; }
+            else { badge.hidden = true; }
+        };
+
+        const render = (data) => {
+            setBadge(data.count || 0);
+            list.innerHTML = '';
+            if (!data.items || !data.items.length) {
+                const p = document.createElement('p');
+                p.className = 'notif-empty muted';
+                p.textContent = 'No notifications yet.';
+                list.appendChild(p);
+                return;
+            }
+            data.items.forEach((it) => {
+                const a = document.createElement('a');
+                a.className = 'notif-pop-item' + (it.is_read ? '' : ' is-unread');
+                a.href = it.url || '#';
+                a.dataset.id = it.id;
+                const t = document.createElement('span'); t.className = 'npi-title'; t.textContent = it.title;
+                a.appendChild(t);
+                if (it.body) { const b = document.createElement('span'); b.className = 'npi-body muted'; b.textContent = it.body; a.appendChild(b); }
+                const ago = document.createElement('span'); ago.className = 'npi-ago muted'; ago.textContent = it.ago || '';
+                a.appendChild(ago);
+                list.appendChild(a);
+            });
+        };
+
+        const loadFeed = () => {
+            fetch(feedUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(render)
+                .catch(() => {});
+        };
+
+        loadFeed();
+        setInterval(loadFeed, 60000);
+        bell.addEventListener('click', () => loadFeed());
+
+        const markAll = document.getElementById('notif-mark-all');
+        if (markAll) {
+            markAll.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                fetch(readAllUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+                    .then(() => loadFeed())
+                    .catch(() => {});
+            });
+        }
+
+        list.addEventListener('click', (e) => {
+            const item = e.target.closest('.notif-pop-item');
+            if (!item) return;
+            const id = item.dataset.id;
+            const href = item.getAttribute('href');
+            if (id && baseUrl) {
+                fetch(baseUrl + '/' + id + '/read', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' }).catch(() => {});
+            }
+            if (!href || href === '#') e.preventDefault();
+        });
+    })();
 })();

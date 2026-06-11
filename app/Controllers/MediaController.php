@@ -8,7 +8,9 @@ use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\Database;
 use App\Core\StreamToken;
+use App\Models\CategoryFollow;
 use App\Models\Company;
+use App\Models\DownloadRequest;
 use App\Models\Favorite;
 use App\Models\Media;
 use App\Models\Section;
@@ -42,15 +44,26 @@ final class MediaController
         // Issue a short-lived stream/download token for this media
         $streamToken = StreamToken::issue((int) $m['id']);
 
+        $userId      = (int) Auth::id();
+        $canDownload = $this->isDownloadable($m);
+        // Approved single-use token waiting to be used (drives the "Download
+        // (approved)" button), and any pending request state for the UI.
+        $approved    = DownloadRequest::usableFor($userId, (int) $m['id']);
+
         echo view('media/show', [
             'media'        => $m,
             'section'      => $section,
             'categories'   => Media::categoriesFor((int) $m['id']),
             'streamToken'  => $streamToken,
-            'canDownload'  => $this->isDownloadable($m),
+            'canDownload'  => $canDownload,
             'canEdit'      => Auth::canEdit() || Auth::isSuperAdmin(),
             'canDelete'    => Auth::canDelete() || Auth::isSuperAdmin(),
-            'isFavorite'   => Favorite::isFavorite((int) Auth::id(), (int) $m['id']),
+            'isFavorite'   => Favorite::isFavorite($userId, (int) $m['id']),
+            'related'      => Media::related((int) $m['id'], Auth::allowedSections(), 8),
+            'favIds'       => Favorite::idsForUser($userId),
+            'followedCats' => CategoryFollow::followedIds($userId),
+            'approvedToken'  => $approved['token'] ?? null,
+            'hasPendingReq'  => DownloadRequest::hasPending($userId, (int) $m['id']),
         ]);
     }
 

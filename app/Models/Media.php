@@ -320,6 +320,78 @@ final class Media
         ];
     }
 
+    /**
+     * Related media for the detail page.
+     *
+     * Primary signal: other items that share one or more categories with the
+     * target (ranked by how many they share). If that doesn't fill the quota,
+     * we top up with other items of the same media type. Section visibility is
+     * always enforced so a user never sees something they can't access.
+     *
+     * @param array<int,string> $allowedSections
+     */
+    public static function related(int $mediaId, array $allowedSections, int $limit = 6): array
+    {
+        if (!$allowedSections) return [];
+        $limit = max(1, min(24, $limit));
+
+        $secMarks = implode(',', array_fill(0, count($allowedSections), '?'));
+        $visClause = "(s.code IN ($secMarks) OR EXISTS (
+            SELECT 1 FROM media_categories mcv
+            JOIN categories cv ON cv.id = mcv.category_id
+            JOIN sections sv   ON sv.id = cv.section_id
+            WHERE mcv.media_id = m.id AND sv.code IN ($secMarks)
+        ))";
+
+        // 1) Items that share at least one category with the target.
+        $params = [$mediaId];
+        foreach ($allowedSections as $sc) $params[] = $sc;
+        foreach ($allowedSections as $sc) $params[] = $sc;
+        $params[] = $mediaId;
+
+        $rows = Database::all(
+            "SELECT m.*, s.code AS section_code, s.name AS section_name,
+                    (SELECT COUNT(*) FROM media_categories mc1
+                     WHERE mc1.media_id = m.id
+                       AND mc1.category_id IN (
+                           SELECT category_id FROM media_categories WHERE media_id = ?
+                       )
+                    ) AS shared
+             FROM media m JOIN sections s ON s.id = m.section_id
+             WHERE $visClause AND m.id <> ?
+             HAVING shared > 0
+             ORDER BY shared DESC, m.is_featured DESC, m.created_at DESC
+             LIMIT $limit",
+            $params
+        );
+
+        // 2) Top up with same-type items if we have spare slots.
+        if (count($rows) < $limit) {
+            $exclude = array_merge([$mediaId], array_map(static fn ($r) => (int) $r['id'], $rows));
+            $exMarks = implode(',', array_fill(0, count($exclude), '?'));
+            $need = $limit - count($rows);
+            $type = (string) Database::scalar("SELECT media_type FROM media WHERE id = ?", [$mediaId]);
+
+            $params2 = [];
+            foreach ($allowedSections as $sc) $params2[] = $sc;
+            foreach ($allowedSections as $sc) $params2[] = $sc;
+            $params2[] = $type;
+            foreach ($exclude as $id) $params2[] = $id;
+
+            $more = Database::all(
+                "SELECT m.*, s.code AS section_code, s.name AS section_name
+                 FROM media m JOIN sections s ON s.id = m.section_id
+                 WHERE $visClause AND m.media_type = ? AND m.id NOT IN ($exMarks)
+                 ORDER BY m.is_featured DESC, m.view_count DESC, m.created_at DESC
+                 LIMIT $need",
+                $params2
+            );
+            $rows = array_merge($rows, $more);
+        }
+
+        return $rows;
+    }
+
     /** Stats for admin dashboard */
     public static function statsOverview(): array
     {

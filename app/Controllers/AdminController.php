@@ -7,9 +7,12 @@ use App\Core\ActivityLog;
 use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\Database;
+use App\Models\Analytics;
 use App\Models\Category;
 use App\Models\Company;
+use App\Models\DownloadRequest;
 use App\Models\Media;
+use App\Models\Notification;
 use App\Models\Section;
 use App\Models\User;
 
@@ -166,6 +169,110 @@ final class AdminController
              ORDER BY a.id DESC LIMIT 200"
         );
         echo view('admin/activity', ['rows' => $rows]);
+    }
+
+    // -------- DOWNLOAD REQUESTS --------
+    public function downloadRequests(): void
+    {
+        echo view('admin/download_requests', [
+            'requests' => DownloadRequest::listForAdmin(150),
+            'pending'  => DownloadRequest::pendingCount(),
+        ]);
+    }
+
+    public function downloadRequestApprove(int $id): void
+    {
+        Csrf::verifyOrFail();
+        $req = DownloadRequest::find($id);
+        if (!$req) { http_response_code(404); return; }
+        if ($req['status'] !== 'pending') {
+            flash('error', 'This request has already been reviewed.');
+            redirect('/admin/download-requests');
+        }
+        DownloadRequest::approve($id, (int) Auth::id(), 7);
+        $m = Media::find((int) $req['media_id']);
+        ActivityLog::record('download.request.approve', 'media', (int) $req['media_id'], ['request_id' => $id]);
+        Notification::create(
+            (int) $req['user_id'],
+            'download_approved',
+            'Download request approved',
+            'Your request to download "' . ($m['title'] ?? 'an item') . '" was approved. Open it to download (single use).',
+            $m ? url('/media/' . $m['uuid']) : null
+        );
+        flash('success', 'Request approved. The user can now download the file once.');
+        redirect('/admin/download-requests');
+    }
+
+    public function downloadRequestReject(int $id): void
+    {
+        Csrf::verifyOrFail();
+        $req = DownloadRequest::find($id);
+        if (!$req) { http_response_code(404); return; }
+        if ($req['status'] !== 'pending') {
+            flash('error', 'This request has already been reviewed.');
+            redirect('/admin/download-requests');
+        }
+        DownloadRequest::reject($id, (int) Auth::id());
+        $m = Media::find((int) $req['media_id']);
+        ActivityLog::record('download.request.reject', 'media', (int) $req['media_id'], ['request_id' => $id]);
+        Notification::create(
+            (int) $req['user_id'],
+            'download_rejected',
+            'Download request declined',
+            'Your request to download "' . ($m['title'] ?? 'an item') . '" was declined.',
+            $m ? url('/media/' . $m['uuid']) : null
+        );
+        flash('success', 'Request rejected.');
+        redirect('/admin/download-requests');
+    }
+
+    // -------- ANALYTICS --------
+    public function analytics(): void
+    {
+        echo view('admin/analytics', [
+            'stats'           => Media::statsOverview(),
+            'storageByType'   => Analytics::storageByType(),
+            'viewsSeries'     => Analytics::dailySeries('view_logs', 30),
+            'downloadsSeries' => Analytics::dailySeries('download_logs', 30),
+            'uploadsSeries'   => Analytics::dailySeries('media', 30),
+            'topViewed'       => Media::topViewed(10),
+            'topDownloaded'   => Media::topDownloaded(10),
+            'activeUsers'     => Analytics::activeUsers(30, 10),
+            'actions'         => Analytics::actionBreakdown(30),
+        ]);
+    }
+
+    /** Stream a CSV report (activity log or downloads). */
+    public function analyticsExport(): void
+    {
+        $report = (string) ($_GET['report'] ?? 'activity');
+        if (!in_array($report, ['activity', 'downloads'], true)) $report = 'activity';
+
+        if ($report === 'downloads') {
+            $rows = Analytics::downloadsForExport(20000);
+            $headers = ['created_at', 'media_title', 'media_type', 'user', 'ip_address', 'bytes_sent'];
+            $filename = 'downloads-report-' . date('Ymd-His') . '.csv';
+        } else {
+            $rows = Analytics::activityForExport(20000);
+            $headers = ['created_at', 'action', 'entity_type', 'entity_id', 'user', 'ip_address'];
+            $filename = 'activity-report-' . date('Ymd-His') . '.csv';
+        }
+
+        ActivityLog::record('analytics.export', null, null, ['report' => $report, 'rows' => count($rows)]);
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: private, no-store');
+
+        $out = fopen('php://output', 'w');
+        fputcsv($out, $headers);
+        foreach ($rows as $r) {
+            $line = [];
+            foreach ($headers as $h) $line[] = $r[$h] ?? '';
+            fputcsv($out, $line);
+        }
+        fclose($out);
+        exit;
     }
 
     // -------- COMPANIES --------

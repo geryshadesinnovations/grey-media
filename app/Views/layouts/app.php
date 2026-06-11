@@ -41,6 +41,22 @@ $theme = $_COOKIE['theme'] ?? 'dark';
         <a class="icon-btn" href="<?= url('/favorites') ?>" title="My Favorites" aria-label="My Favorites">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
         </a>
+        <div class="notif-menu">
+            <button class="icon-btn notif-bell" id="notif-bell" type="button" data-popover="notif-popover" title="Notifications" aria-label="Notifications">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                <span class="notif-badge" id="notif-badge" hidden>0</span>
+            </button>
+            <div class="popover notif-popover" id="notif-popover" hidden>
+                <div class="popover-header notif-pop-head">
+                    <span>Notifications</span>
+                    <button type="button" class="link-btn" id="notif-mark-all">Mark all read</button>
+                </div>
+                <div class="notif-pop-list" id="notif-pop-list" data-feed-url="<?= url('/notifications/feed') ?>" data-read-all-url="<?= url('/notifications/read-all') ?>">
+                    <p class="notif-empty muted">Loading…</p>
+                </div>
+                <a class="notif-pop-foot" href="<?= url('/notifications') ?>">View all notifications</a>
+            </div>
+        </div>
         <?php if (Auth::canUpload()): ?>
         <a class="btn-primary" href="<?= url('/upload') ?>">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -59,6 +75,7 @@ $theme = $_COOKIE['theme'] ?? 'dark';
                     <small class="role-badge"><?= e($user['role_name'] ?? $user['role_code']) ?></small>
                 </div>
                 <a href="<?= url('/favorites') ?>">My Favorites</a>
+                <a href="<?= url('/notifications') ?>">Notifications</a>
                 <?php if (Auth::isSuperAdmin() || Auth::canManageUsers()): ?>
                 <hr>
                 <a href="<?= url('/admin') ?>">Admin Dashboard</a>
