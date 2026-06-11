@@ -315,6 +315,15 @@
                     btn.setAttribute('aria-pressed', d.following ? 'true' : 'false');
                     const lbl = btn.querySelector('.follow-label');
                     if (lbl) lbl.textContent = d.following ? 'Following' : 'Follow';
+                    // On the Favorites > Following list, unfollowing drops the card.
+                    if (!d.following && btn.dataset.removable !== undefined) {
+                        const card = btn.closest('.follow-card');
+                        if (card) {
+                            card.style.transition = 'opacity .2s ease';
+                            card.style.opacity = '0';
+                            setTimeout(() => card.remove(), 200);
+                        }
+                    }
                 })
                 .catch(() => {})
                 .finally(() => { btn.dataset.busy = '0'; });
@@ -450,5 +459,80 @@
             }
             if (!href || href === '#') e.preventDefault();
         });
+    })();
+
+    // ---- Global loading states ----------------------------------------------
+    // A thin top progress bar for page transitions + downloads, and an
+    // automatic "loading" state on form submit buttons to prevent double
+    // submission. AJAX flows (favorites/follow/share/notifications) already
+    // set data-busy on their buttons, which the CSS styles as a spinner.
+    (() => {
+        const bar = document.getElementById('global-progress');
+        let active = false;
+        let resetTimer = null;
+
+        const start = () => {
+            if (!bar || active) return;
+            active = true;
+            bar.classList.remove('done');
+            // force reflow so the width transition restarts
+            void bar.offsetWidth;
+            bar.classList.add('active');
+        };
+        const finish = () => {
+            if (!bar) return;
+            active = false;
+            bar.classList.add('done');
+            bar.classList.remove('active');
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => bar.classList.remove('done'), 450);
+        };
+        // Expose so other modules can show progress for their own async work.
+        window.GSLoading = { start, finish };
+
+        // A new page load (including back/forward cache restore) clears the bar.
+        window.addEventListener('pageshow', finish);
+        window.addEventListener('beforeunload', start);
+
+        const isInternalNav = (a) => {
+            if (a.target && a.target !== '_self') return false;
+            if (a.hasAttribute('download') || a.dataset.noProgress !== undefined) return false;
+            const href = a.getAttribute('href') || '';
+            if (!href || href[0] === '#' || /^(javascript|mailto|tel):/i.test(href)) return false;
+            try {
+                const u = new URL(a.href, location.href);
+                if (u.origin !== location.origin) return false;
+                if (u.pathname === location.pathname && u.hash) return false;
+            } catch (_) { return false; }
+            return true;
+        };
+
+        document.addEventListener('click', (e) => {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const a = e.target.closest('a[href]');
+            if (!a) return;
+            const href = a.getAttribute('href') || '';
+            // Downloads don't navigate, so show progress briefly then clear.
+            if (a.hasAttribute('download') || /\/download\//.test(href)) {
+                start();
+                setTimeout(finish, 4000);
+                return;
+            }
+            if (isInternalNav(a)) start();
+        });
+
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (!(form instanceof HTMLFormElement) || e.defaultPrevented) return;
+            // Skip AJAX forms (they handle their own busy state without navigating).
+            if (form.matches('[data-ajax], [data-share-form]') || form.id === 'upload-form') return;
+            start();
+            const btn = form.querySelector('button[type="submit"], button:not([type])');
+            if (btn && !btn.disabled) {
+                btn.classList.add('is-loading');
+                // Disable AFTER the synchronous submit so the button value still posts.
+                setTimeout(() => { btn.disabled = true; }, 0);
+            }
+        }, true);
     })();
 })();

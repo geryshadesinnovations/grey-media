@@ -135,7 +135,7 @@ foreach ($sections as $s) {
 
         <!-- Right: metadata & categories (same layout as upload form) -->
         <aside class="upload-meta glass">
-            <form id="edit-form" method="post" action="<?= url('/media/' . $media['id']) ?>">
+            <form id="edit-form" method="post" action="<?= url('/media/' . $media['id']) ?>" enctype="multipart/form-data">
                 <?= Csrf::field() ?>
 
                 <!-- Section 1: Basic Info -->
@@ -184,7 +184,41 @@ foreach ($sections as $s) {
                     </div>
                 </div>
 
-                <!-- Section 3: Settings -->
+                <!-- Section 3: Replace file (keeps all metadata & relationships) -->
+                <?php
+                    $accept = match ($media['media_type']) {
+                        'video' => 'video/mp4,video/*',
+                        'image' => 'image/*',
+                        'pdf'   => 'application/pdf',
+                        'ppt'   => '.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                        default => '',
+                    };
+                    $needsThumb = in_array($media['media_type'], ['video', 'ppt', 'pdf'], true);
+                ?>
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        Replace file <span class="muted" style="font-weight:400">(optional)</span>
+                    </div>
+                    <div class="form-section-body">
+                        <p class="form-hint">
+                            Upload a new <strong><?= strtoupper((string) $media['media_type']) ?></strong> to replace the current file.
+                            The replacement must be the same media type. Title, description, categories,
+                            favorites, views and share links all stay intact.
+                        </p>
+                        <label><span>New <?= e($media['media_type']) ?> file</span>
+                            <input type="file" name="file" accept="<?= e($accept) ?>">
+                        </label>
+                        <?php if ($needsThumb): ?>
+                        <label><span>New thumbnail (optional, recommended)</span>
+                            <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp">
+                        </label>
+                        <p class="form-hint">If you don't provide a thumbnail and the server can't auto-generate one, the existing thumbnail is kept.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Section 4: Settings -->
                 <div class="form-section">
                     <div class="form-section-title">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>

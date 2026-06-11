@@ -25,6 +25,30 @@ final class User
         );
     }
 
+    /**
+     * Active user ids who can access ANY of the given section codes.
+     * Mirrors Auth's rules: super admins see everything; otherwise the
+     * per-user can_graphics / can_events flags gate each section.
+     *
+     * @param array<int,string> $sectionCodes
+     * @return array<int,int>
+     */
+    public static function idsWithSectionAccess(array $sectionCodes): array
+    {
+        $codes = array_values(array_unique(array_filter($sectionCodes)));
+        if (!$codes) return [];
+
+        $conds = ["r.code = 'super_admin'"];
+        if (in_array('graphics', $codes, true)) $conds[] = "u.can_graphics = 1";
+        if (in_array('events', $codes, true))   $conds[] = "u.can_events = 1";
+
+        $rows = Database::all(
+            "SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
+             WHERE u.is_active = 1 AND (" . implode(' OR ', $conds) . ")"
+        );
+        return array_map(static fn ($r) => (int) $r['id'], $rows);
+    }
+
     public static function roles(): array
     {
         return Database::all("SELECT * FROM roles ORDER BY id");

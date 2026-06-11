@@ -1879,3 +1879,94 @@ a.notif-title:hover { color: var(--accent); }
 .hbar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
 .hbar-val { color: var(--text-muted); font-size: 12.5px; white-space: nowrap; }
 @media (max-width: 560px) { .hbar-row { grid-template-columns: 90px 1fr; } .hbar-val { grid-column: 2; text-align: right; } }
+
+
+/* =====================================================================
+   Round 3: notification popover responsiveness + readability, global
+   loading states, Home button, Favorites "Following" section.
+   Appended; reuses existing theme variables only.
+   ===================================================================== */
+
+/* ---- Notification popover: solid, readable glass (no bleed-through) ---- */
+.notif-popover {
+  background: var(--bg-2);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+}
+.notif-pop-head { background: var(--bg-2); }
+.notif-pop-foot { background: var(--bg-2); }
+
+/* Keep the popover fully inside the viewport on phones. */
+@media (max-width: 560px) {
+  .notif-popover {
+    position: fixed;
+    top: 62px; left: 8px; right: 8px;
+    width: auto; max-width: none;
+    max-height: calc(100vh - 78px);
+    display: flex; flex-direction: column;
+    z-index: 1200;
+  }
+  .notif-pop-list { max-height: none; flex: 1 1 auto; }
+}
+
+/* ---- Global top progress bar ---- */
+.global-progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  z-index: 4000; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 8px rgba(167,139,250,.6);
+}
+.global-progress.active {
+  width: 92%; opacity: 1;
+  transition: width 8s cubic-bezier(.1,.7,.3,1), opacity .2s ease;
+}
+.global-progress.done {
+  width: 100%; opacity: 1;
+  transition: width .2s ease, opacity .4s ease .15s;
+}
+
+/* ---- Button loading / busy spinner ---- */
+@keyframes gs-btn-spin { to { transform: rotate(360deg); } }
+button.is-loading, [data-busy="1"] { position: relative; pointer-events: none; opacity: .8; }
+button.is-loading::after, [data-busy="1"]::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 15px; height: 15px; margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255,255,255,.45); border-top-color: #fff;
+  border-radius: 50%; animation: gs-btn-spin .7s linear infinite;
+}
+/* Ghost / light buttons get an accent spinner so it's visible. */
+.btn-ghost.is-loading::after,
+.fav-btn[data-busy="1"]::after,
+.follow-btn[data-busy="1"]::after {
+  border-color: rgba(167,139,250,.3); border-top-color: var(--accent);
+}
+
+/* ---- Favorites page: Following + Favorites sections ---- */
+.fav-section { margin-bottom: 2.25rem; }
+.fav-section:last-child { margin-bottom: 0; }
+.empty-state.compact {
+  padding: 1.1rem 1.4rem; text-align: left;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.empty-state.compact p { margin: 0; }
+
+.follow-card-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .8rem;
+}
+.follow-card { display: flex; align-items: center; gap: .5rem; padding: .7rem .8rem; border-radius: var(--radius); }
+.follow-card-link { display: flex; align-items: center; gap: .65rem; min-width: 0; flex: 1 1 auto; color: var(--text); }
+.follow-card-link:hover .follow-card-name { color: var(--accent); }
+.follow-card-ic { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.follow-card-body { min-width: 0; display: flex; flex-direction: column; }
+.follow-card-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.follow-card-section { font-size: 12px; }
+
+/* ---- Notifications page blocks ---- */
+.notif-block { padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; }
+.notif-block h3 { margin: 0 0 .6rem; }
+.notif-block .notif-list { margin: 0; border-radius: 0; }
+.notif-block-empty { margin: .25rem 0; }
+.notif-cleanup-note { display: flex; align-items: center; gap: .4rem; margin: -.35rem 0 1rem; font-size: 12.5px; }

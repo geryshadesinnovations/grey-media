@@ -62,10 +62,34 @@ final class Notification
         );
     }
 
+    /** Notifications of a single type (e.g. 'upload'). */
+    public static function ofType(int $userId, string $type, int $limit = 100): array
+    {
+        $limit = max(1, min(200, $limit));
+        return Database::all(
+            "SELECT * FROM notifications WHERE user_id = ? AND type = ? ORDER BY id DESC LIMIT $limit",
+            [$userId, $type]
+        );
+    }
+
+    /** Notifications NOT of the given type (everything except uploads). */
+    public static function excludingType(int $userId, string $type, int $limit = 100): array
+    {
+        $limit = max(1, min(200, $limit));
+        return Database::all(
+            "SELECT * FROM notifications WHERE user_id = ? AND type <> ? ORDER BY id DESC LIMIT $limit",
+            [$userId, $type]
+        );
+    }
+
     public static function markRead(int $id, int $userId): void
     {
+        // is_read flips immediately; viewed_at is stamped only on the FIRST
+        // view and starts this user's 24h auto-removal timer.
         Database::execute(
-            "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?",
+            "UPDATE notifications
+             SET is_read = 1, viewed_at = COALESCE(viewed_at, NOW())
+             WHERE id = ? AND user_id = ?",
             [$id, $userId]
         );
     }
@@ -80,6 +104,31 @@ final class Notification
 
     public static function markAllRead(int $userId): void
     {
-        Database::execute("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0", [$userId]);
+        Database::execute(
+            "UPDATE notifications
+             SET is_read = 1, viewed_at = COALESCE(viewed_at, NOW())
+             WHERE user_id = ? AND is_read = 0",
+            [$userId]
+        );
+    }
+
+    /**
+     * Lazy garbage-collect: permanently remove this user's notifications that
+     * were first viewed more than 24 hours ago. Each user has an independent
+     * timer because viewed_at is per-row (and rows are per-user). Called on
+     * read paths (feed/index) so no cron is required.
+     */
+    public static function purgeExpired(int $userId): void
+    {
+        try {
+            Database::execute(
+                "DELETE FROM notifications
+                 WHERE user_id = ? AND viewed_at IS NOT NULL
+                   AND viewed_at < (NOW() - INTERVAL 24 HOUR)",
+                [$userId]
+            );
+        } catch (\Throwable $e) {
+            error_log('[Notification::purgeExpired] ' . $e->getMessage());
+        }
     }
 }

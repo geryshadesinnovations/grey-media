@@ -146,6 +146,29 @@ final class Media
         Database::execute("DELETE FROM media WHERE id = ?", [$id]);
     }
 
+    /**
+     * Replace the underlying file + its derived assets while keeping the same
+     * row id/uuid and ALL relationships (categories, favorites, shares, views,
+     * download requests, etc.) intact.
+     */
+    public static function updateFile(int $id, array $data): void
+    {
+        $allowed = [
+            'mime_type', 'media_type', 'file_path', 'file_size', 'file_hash',
+            'thumbnail_path', 'preview_path', 'hls_master', 'duration_sec', 'width', 'height',
+        ];
+        $sets = []; $params = [];
+        foreach ($allowed as $k) {
+            if (array_key_exists($k, $data)) {
+                $sets[] = "$k = ?";
+                $params[] = $data[$k];
+            }
+        }
+        if (!$sets) return;
+        $params[] = $id;
+        Database::execute("UPDATE media SET " . implode(',', $sets) . " WHERE id = ?", $params);
+    }
+
     public static function bumpView(int $id): void
     {
         Database::execute("UPDATE media SET view_count = view_count + 1 WHERE id = ?", [$id]);

@@ -412,10 +412,12 @@ CREATE TABLE `notifications` (
     `body`       VARCHAR(500) NULL,
     `url`        VARCHAR(255) NULL,
     `is_read`    TINYINT(1) NOT NULL DEFAULT 0,
+    `viewed_at`  DATETIME NULL COMMENT 'First time the user viewed it; auto-removed 24h later',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `idx_notif_user_read` (`user_id`,`is_read`),
     KEY `idx_notif_user_created` (`user_id`,`created_at`),
+    KEY `idx_notif_viewed` (`viewed_at`),
     CONSTRAINT `fk_notif_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

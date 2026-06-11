@@ -106,13 +106,15 @@ final class DownloadRequestController
     private function canAlreadyDownload(array $m): bool
     {
         if (Auth::isSuperAdmin()) return true;
-        if (empty($m['is_downloadable'])) return false;
+        if (empty($m['is_downloadable'])) {
+            // Not flagged downloadable - only a legacy explicit grant counts.
+            return (bool) Database::scalar(
+                "SELECT 1 FROM media_download_grants
+                 WHERE media_id = ? AND user_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
+                [$m['id'], Auth::id()]
+            );
+        }
         if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
-        if (Auth::canDownload()) return true;
-        return (bool) Database::scalar(
-            "SELECT 1 FROM media_download_grants
-             WHERE media_id = ? AND user_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
-            [$m['id'], Auth::id()]
-        );
+        return true;
     }
 }

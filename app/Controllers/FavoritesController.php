@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\ActivityLog;
 use App\Core\Auth;
 use App\Core\Csrf;
+use App\Models\CategoryFollow;
 use App\Models\Favorite;
 use App\Models\Media;
 
@@ -38,9 +39,10 @@ final class FavoritesController
         );
 
         echo view('favorites/index', [
-            'result' => $result,
-            'sort'   => $sort,
-            'favIds' => Favorite::idsForUser($userId),
+            'result'  => $result,
+            'sort'    => $sort,
+            'favIds'  => Favorite::idsForUser($userId),
+            'follows' => CategoryFollow::followedList($userId),
         ]);
     }
 

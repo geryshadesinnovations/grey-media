@@ -8,11 +8,11 @@ use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\Database;
 use App\Models\Category;
-use App\Models\CategoryFollow;
 use App\Models\Company;
 use App\Models\Media;
 use App\Models\Notification;
 use App\Models\Section;
+use App\Models\User;
 use App\Services\MediaProcessor;
 
 final class UploadController
@@ -214,18 +214,24 @@ final class UploadController
             'title' => $title, 'mime' => $mime, 'size' => filesize($absPath),
         ]);
 
-        // Notify users who follow any of the (expanded) categories this upload
-        // landed in - except the uploader themselves.
-        $followerIds = array_values(array_filter(
-            CategoryFollow::followerUserIds(array_keys($expandedCatIds)),
+        // Notify every user who has access to this media's section(s) - one
+        // notification per upload - regardless of whether they follow a
+        // category. Section access mirrors Auth (super admins + the per-user
+        // can_graphics / can_events flags). The uploader is excluded.
+        $sectionCodes = array_values(array_unique(
+            array_map(fn ($r) => (string) $r['section_code'], $allowedRows)
+        ));
+        $recipientIds = array_values(array_filter(
+            User::idsWithSectionAccess($sectionCodes),
             fn ($uid) => $uid !== (int) Auth::id()
         ));
-        if ($followerIds) {
+        if ($recipientIds) {
+            $label = implode(' & ', array_map('ucfirst', $sectionCodes));
             Notification::createMany(
-                $followerIds,
+                $recipientIds,
                 'upload',
-                'New upload in a category you follow',
-                '"' . $title . '" was just added.',
+                'New ' . strtoupper($type) . ' in ' . $label,
+                '"' . $title . '" was just added to ' . $label . '.',
                 url('/media/' . $uuid)
             );
         }
@@ -243,55 +249,7 @@ final class UploadController
     /** @return array{0:?string,1:?string,2:?string,3:?int,4:?int,5:?int} */
     private function processMedia(string $absPath, string $mime, string $type, string $uuid): array
     {
-        $thumbRel = $previewRel = $hlsMasterRel = null;
-        $duration = $w = $h = null;
-
-        $thumbDir = '/uploads/thumbnails/' . date('Y/m');
-        $absThumbDir = storage_path($thumbDir);
-        if (!is_dir($absThumbDir)) @mkdir($absThumbDir, 0775, true);
-
-        if ($type === 'image') {
-            $thumbRel = $thumbDir . '/' . $uuid . '.jpg';
-            MediaProcessor::imageThumbnail($absPath, storage_path($thumbRel));
-            if ($info = @getimagesize($absPath)) { $w = $info[0]; $h = $info[1]; }
-        } elseif ($type === 'video') {
-            $thumbRel = $thumbDir . '/' . $uuid . '.jpg';
-            MediaProcessor::videoThumbnail($absPath, storage_path($thumbRel));
-            $duration = MediaProcessor::videoDuration($absPath);
-
-            // Optional HLS transcode (CPU-heavy; usually queued. Phase 1: best-effort.)
-            $hlsDir = '/uploads/hls/' . $uuid;
-            $absHls = storage_path($hlsDir);
-            if (MediaProcessor::transcodeHls($absPath, $absHls)) {
-                $hlsMasterRel = $hlsDir . '/master.m3u8';
-            }
-        } elseif ($type === 'pdf') {
-            $previewDir = '/uploads/pdf-previews/' . date('Y/m');
-            if (!is_dir(storage_path($previewDir))) @mkdir(storage_path($previewDir), 0775, true);
-            $previewRel = $previewDir . '/' . $uuid . '.png';
-            MediaProcessor::pdfPreview($absPath, storage_path($previewRel));
-            $thumbRel = $previewRel; // reuse for grid
-        } elseif ($type === 'ppt') {
-            // Convert PPT/PPTX to a full PDF so users can navigate ALL slides
-            // in the browser's PDF viewer (not just see the first slide).
-            // Also render a first-slide PNG for the dashboard grid thumbnail.
-            $previewDir = '/uploads/ppt-previews/' . date('Y/m');
-            $absPreviewDir = storage_path($previewDir);
-            if (!is_dir($absPreviewDir)) @mkdir($absPreviewDir, 0775, true);
-            $previewRel = $previewDir . '/' . $uuid . '.pdf';
-            $thumbRel   = $thumbDir . '/' . $uuid . '.png';
-            $r = MediaProcessor::pptToPdfAndThumbnail(
-                $absPath,
-                storage_path($previewRel),
-                storage_path($thumbRel),
-                storage_path('/cache')
-            );
-            // If conversion failed (e.g. LibreOffice missing), drop preview
-            if (!$r['pdf'])   $previewRel = null;
-            if (!$r['thumb']) $thumbRel   = null;
-        }
-
-        return [$thumbRel, $previewRel, $hlsMasterRel, $duration, $w, $h];
+        return MediaProcessor::deriveAll($absPath, $mime, $type, $uuid);
     }
 
     private function detectMime(string $path, string $name): string

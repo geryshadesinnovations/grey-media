@@ -21,8 +21,10 @@ final class NotificationController
     public function index(): void
     {
         $userId = (int) Auth::id();
+        Notification::purgeExpired($userId);
         echo view('notifications/index', [
-            'items'     => Notification::all($userId, 100),
+            'uploads'   => Notification::ofType($userId, 'upload', 100),
+            'others'    => Notification::excludingType($userId, 'upload', 100),
             'follows'   => CategoryFollow::followedList($userId),
             'unread'    => Notification::unreadCount($userId),
         ]);
@@ -32,6 +34,7 @@ final class NotificationController
     public function feed(): void
     {
         $userId = (int) Auth::id();
+        Notification::purgeExpired($userId);
         $rows = Notification::recent($userId, 12);
         $items = array_map(static function (array $n): array {
             return [

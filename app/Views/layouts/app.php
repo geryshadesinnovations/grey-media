@@ -20,6 +20,7 @@ $theme = $_COOKIE['theme'] ?? 'dark';
 </head>
 <body>
 <!-- Watermark removed for UI clarity -->
+<div id="global-progress" class="global-progress" aria-hidden="true"></div>
 
 <header class="topbar">
     <a class="brand" href="<?= url('/dashboard') ?>">
@@ -35,6 +36,9 @@ $theme = $_COOKIE['theme'] ?? 'dark';
     </form>
 
     <nav class="topbar-actions">
+        <a class="icon-btn" href="<?= url('/dashboard') ?>" title="Home" aria-label="Home">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+        </a>
         <button class="icon-btn" id="theme-toggle" type="button" title="Toggle theme">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
         </button>

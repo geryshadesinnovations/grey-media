@@ -195,18 +195,20 @@ final class StreamController
     private function isDownloadable(array $m): bool
     {
         if (Auth::isSuperAdmin()) return true;
-        if (!Auth::canDownload()) {
-            $granted = Database::scalar(
-                "SELECT 1 FROM media_download_grants
-                 WHERE media_id = ? AND user_id = ?
-                   AND (expires_at IS NULL OR expires_at > NOW())",
-                [$m['id'], Auth::id()]
-            );
-            if (!$granted) return false;
+        // The media's own "Allow downloads" flag is the primary gate: when it's
+        // on (and not past any download window) every viewer may download.
+        if (!empty($m['is_downloadable'])) {
+            if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
+            return true;
         }
-        if (!$m['is_downloadable']) return false;
-        if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
-        return true;
+        // Not flagged downloadable: only an explicit (legacy) grant allows it.
+        $granted = Database::scalar(
+            "SELECT 1 FROM media_download_grants
+             WHERE media_id = ? AND user_id = ?
+               AND (expires_at IS NULL OR expires_at > NOW())",
+            [$m['id'], Auth::id()]
+        );
+        return (bool) $granted;
     }
 
     /** Stream a file with HTTP Range support (videos can seek). */
