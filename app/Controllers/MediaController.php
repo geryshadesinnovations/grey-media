@@ -219,8 +219,23 @@ final class MediaController
             redirect($back);
         }
 
-        // Store the new original under the SAME uuid (with a random suffix so we
-        // never clobber the old file before the DB switch / cleanup).
+        // A thumbnail is COMPULSORY when replacing a video / ppt / pdf file.
+        $needsThumb = in_array($newType, ['video', 'ppt', 'pdf'], true);
+        $thumbOk    = !empty($_FILES['thumbnail']) && (int) ($_FILES['thumbnail']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
+        $thumbMime  = $thumbOk ? (mime_content_type($_FILES['thumbnail']['tmp_name']) ?: '') : '';
+        if ($needsThumb) {
+            if (!$thumbOk) {
+                flash('error', 'A thumbnail image is required when replacing a ' . strtoupper($newType) . ' file.');
+                redirect($back);
+            }
+            if (!in_array($thumbMime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                flash('error', 'The thumbnail must be a JPG, PNG or WEBP image.');
+                redirect($back);
+            }
+        }
+
+        // Store the new original under the SAME uuid (random suffix so we never
+        // clobber the old file before the DB switch / cleanup).
         $uuid   = (string) $m['uuid'];
         $ext    = $this->extFor($mime, (string) $file['name']);
         $relDir = '/uploads/originals/' . date('Y/m');
@@ -240,28 +255,36 @@ final class MediaController
             if ($other && (int) $other['id'] !== $id) $hash = null;
         }
 
-        // Regenerate derived assets (same routine as upload).
-        [$thumbRel, $previewRel, $hlsRel, $duration, $w, $h] =
-            MediaProcessor::deriveAll($absPath, $mime, $newType, $uuid);
-
-        // A custom thumbnail upload (optional) always wins.
-        $customThumbRel = null;
-        if (!empty($_FILES['thumbnail']) && (int) ($_FILES['thumbnail']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-            $tf = $_FILES['thumbnail'];
-            $tmime = mime_content_type($tf['tmp_name']) ?: '';
-            if (in_array($tmime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-                $tdir = '/uploads/thumbnails/' . date('Y/m');
-                if (!is_dir(storage_path($tdir))) @mkdir(storage_path($tdir), 0775, true);
-                $text = $tmime === 'image/png' ? 'png' : ($tmime === 'image/webp' ? 'webp' : 'jpg');
-                $customThumbRel = $tdir . '/' . $uuid . '-custom-' . bin2hex(random_bytes(3)) . '.' . $text;
-                move_uploaded_file($tf['tmp_name'], storage_path($customThumbRel));
+        // Clear stale HLS segments for this uuid FIRST, so the same pipeline as
+        // upload regenerates a fresh adaptive ladder into /uploads/hls/<uuid>.
+        // (This is what was missing: previously the new segments were generated
+        // and then deleted again, so replaced videos lost the quality selector.)
+        if ($newType === 'video') {
+            $hlsDirAbs = storage_path('/uploads/hls/' . $uuid);
+            if (is_dir($hlsDirAbs)) {
+                foreach (glob($hlsDirAbs . '/*') ?: [] as $f) { if (is_file($f)) @unlink($f); }
             }
         }
 
-        // Build the column set. We always replace the original file, size, mime
-        // and HLS (null clears stale segments). Thumbnail/preview/dimensions are
-        // only overwritten when we actually produced new ones, so we never wipe
-        // a good existing thumbnail just because the server lacks ffmpeg etc.
+        // Regenerate ALL derived assets via the exact same routine uploads use
+        // (thumbnail, pdf/ppt preview, HLS renditions, duration, dimensions).
+        [$thumbRel, $previewRel, $hlsRel, $duration, $w, $h] =
+            MediaProcessor::deriveAll($absPath, $mime, $newType, $uuid);
+
+        // Store the (mandatory for video/ppt/pdf) custom thumbnail; it wins.
+        $customThumbRel = null;
+        if ($thumbOk && in_array($thumbMime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            $tdir = '/uploads/thumbnails/' . date('Y/m');
+            if (!is_dir(storage_path($tdir))) @mkdir(storage_path($tdir), 0775, true);
+            $text = $thumbMime === 'image/png' ? 'png' : ($thumbMime === 'image/webp' ? 'webp' : 'jpg');
+            $customThumbRel = $tdir . '/' . $uuid . '-custom-' . bin2hex(random_bytes(3)) . '.' . $text;
+            move_uploaded_file($_FILES['thumbnail']['tmp_name'], storage_path($customThumbRel));
+        }
+
+        // Build the column set. The original file, size, mime and HLS are always
+        // replaced (a null hls_master makes the player fall back to MP4).
+        // Thumbnail/preview/dimensions are only overwritten when produced, so we
+        // never wipe a good existing thumbnail when none could be generated.
         $finalThumb = $customThumbRel ?? $thumbRel;
         $update = [
             'mime_type'  => $mime,
@@ -273,26 +296,26 @@ final class MediaController
         ];
         if ($finalThumb !== null) $update['thumbnail_path'] = $finalThumb;
         if ($previewRel !== null) $update['preview_path']  = $previewRel;
-        $update['duration_sec'] = $duration; // null is fine (image/pdf)
+        $update['duration_sec'] = $duration;
         if ($w !== null) $update['width']  = $w;
         if ($h !== null) $update['height'] = $h;
 
         Media::updateFile($id, $update);
 
-        // Clean up old physical files we no longer reference (best effort).
+        // ---- Clean up files we no longer reference (best effort) ----
+        // We deliberately do NOT touch /uploads/hls/<uuid>: it now holds the
+        // freshly generated segments for the SAME uuid.
         $keep = array_filter([$relPath, $finalThumb, $previewRel]);
+        // If a custom thumbnail replaced an auto-generated one, drop the orphan.
+        if ($thumbRel && $thumbRel !== $finalThumb && $thumbRel !== $previewRel) {
+            $a = storage_path($thumbRel);
+            if (is_file($a)) @unlink($a);
+        }
         foreach (['file_path', 'thumbnail_path', 'preview_path'] as $col) {
             $old = $m[$col] ?? null;
             if ($old && !in_array($old, $keep, true)) {
                 $abs = storage_path($old);
                 if (is_file($abs)) @unlink($abs);
-            }
-        }
-        if (!empty($m['hls_master'])) {
-            $oldHlsDir = dirname(storage_path((string) $m['hls_master']));
-            if (is_dir($oldHlsDir)) {
-                foreach (glob($oldHlsDir . '/*') ?: [] as $f) @unlink($f);
-                @rmdir($oldHlsDir);
             }
         }
 

@@ -1970,3 +1970,67 @@ button.is-loading::after, [data-busy="1"]::after {
 .notif-block .notif-list { margin: 0; border-radius: 0; }
 .notif-block-empty { margin: .25rem 0; }
 .notif-cleanup-note { display: flex; align-items: center; gap: .4rem; margin: -.35rem 0 1rem; font-size: 12.5px; }
+
+
+/* =====================================================================
+   Round 4: modern file inputs (Edit Media), clearer mutually-exclusive
+   category messaging, and visible validation highlighting.
+   Appended; reuses existing theme variables only.
+   ===================================================================== */
+
+/* ---- Modern file picker (.file-field) ---- */
+.file-field { position: relative; margin-bottom: .75rem; }
+.file-field-input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+}
+.file-field-label {
+  display: flex; align-items: center; gap: .8rem; padding: .8rem .9rem;
+  border: 1.5px dashed var(--border); border-radius: 12px; background: var(--bg-2);
+  transition: border-color var(--speed), background var(--speed);
+}
+.file-field:hover .file-field-label { border-color: rgba(167,139,250,.5); background: var(--accent-soft); }
+.file-field.has-file .file-field-label { border-style: solid; border-color: rgba(167,139,250,.55); }
+.file-field-ic {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px;
+  display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
+}
+.file-field-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.file-field-title { font-weight: 600; font-size: 13.5px; }
+.file-field-title .req-tag {
+  font-style: normal; font-weight: 600; font-size: 10.5px; color: var(--danger);
+  background: rgba(248,113,113,.12); padding: 1px 7px; border-radius: 999px; margin-left: .4rem;
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.file-field-name { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-field.has-file .file-field-name { color: var(--accent); font-weight: 600; }
+.file-field-btn {
+  flex: 0 0 auto; padding: .42rem .85rem; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border); font-size: 12.5px; font-weight: 600;
+}
+.file-field:hover .file-field-btn { background: var(--bg-2); color: var(--accent); }
+
+/* ---- Mutually-exclusive category messaging ---- */
+/* Replace the generic dimmed banner with our specific per-card message. */
+.cat-card.dimmed { opacity: 1; }
+.cat-card.dimmed::before { content: none; display: none; }
+.cat-card.dimmed .cat-card-header,
+.cat-card.dimmed .cat-card-body { opacity: .5; }
+.cat-card-msg {
+  padding: .5rem .7rem; margin: .5rem .55rem 0;
+  font-size: 12px; font-weight: 600; line-height: 1.4;
+  color: var(--danger); background: rgba(248,113,113,.1);
+  border: 1px solid rgba(248,113,113,.3); border-radius: 8px;
+}
+
+/* ---- Visible validation highlight (any invalid field/zone) ---- */
+.field-invalid {
+  outline: 2px solid rgba(248,113,113,.75) !important;
+  outline-offset: 2px; border-radius: 10px;
+  animation: gs-shake .3s ease;
+}
+@keyframes gs-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

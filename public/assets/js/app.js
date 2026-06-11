@@ -119,6 +119,20 @@
     // Auto-dismiss toasts
     document.querySelectorAll('.toast').forEach(t => setTimeout(() => t.remove(), 4000));
 
+    // Reusable toast helper for client-side messages (validation, AJAX, etc.).
+    // Shows a single transient toast styled like the server-rendered flash ones.
+    const gsToast = (msg, type) => {
+        document.querySelectorAll('.toast.js-toast').forEach(t => t.remove());
+        const t = document.createElement('div');
+        t.className = 'toast js-toast toast-' + (type === 'success' ? 'success' : 'error');
+        t.setAttribute('role', 'alert');
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 5000);
+        return t;
+    };
+    window.gsToast = gsToast;
+
     // Generic accordion cards [data-accordion]
     document.querySelectorAll('[data-accordion]').forEach(btn => {
         btn.addEventListener('click', () => {

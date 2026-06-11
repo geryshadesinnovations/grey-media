@@ -30,6 +30,8 @@ $renderRootCard = function (array $node, string $sectionName, string $sectionCod
     echo '<span class="cat-card-section">' . e($sectionName) . '</span>';
     echo '<span class="cat-card-count" hidden>0</span>';
     echo '</button>';
+    // Inline message shown when this card is disabled by mutual-exclusion.
+    if ($exclusiveGroup) echo '<div class="cat-card-msg" hidden></div>';
 
     echo '<div class="cat-card-body">';
     if (!empty($node['children'])) {
@@ -159,16 +161,16 @@ foreach ($sections as $s) {
                     </div>
                 </div>
 
-                <!-- Section 2: Where does this go? (categories) -->
+                <!-- Section 2: Categories -->
                 <div class="form-section">
                     <div class="form-section-title">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                        Where does this go?
+                        Categories
                     </div>
                     <div class="form-section-body">
                         <p class="form-hint">
-                            Pick the specific subcategories — parent categories are assigned automatically.
-                            <br><strong>Note:</strong> Gimmick and Art are mutually exclusive.
+                            Pick the subcategories this file belongs to — parent categories are assigned automatically.
+                            Gimmick and Art are mutually exclusive.
                         </p>
 
                         <div id="cat-summary" class="cat-summary" hidden>
@@ -200,20 +202,46 @@ foreach ($sections as $s) {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                         Replace file <span class="muted" style="font-weight:400">(optional)</span>
                     </div>
-                    <div class="form-section-body">
+                    <div class="form-section-body" id="replace-section"
+                         data-media-type="<?= e($media['media_type']) ?>"
+                         data-needs-thumb="<?= $needsThumb ? '1' : '0' ?>">
                         <p class="form-hint">
-                            Upload a new <strong><?= strtoupper((string) $media['media_type']) ?></strong> to replace the current file.
-                            The replacement must be the same media type. Title, description, categories,
-                            favorites, views and share links all stay intact.
+                            Upload a new <strong><?= strtoupper((string) $media['media_type']) ?></strong> to replace the current file
+                            — it runs through the same processing pipeline as a fresh upload
+                            (<?= $media['media_type'] === 'video' ? 'quality options regenerated, ' : '' ?>preview &amp; thumbnail rebuilt).
+                            Title, description, categories, favorites, views and share links all stay intact.
                         </p>
-                        <label><span>New <?= e($media['media_type']) ?> file</span>
-                            <input type="file" name="file" accept="<?= e($accept) ?>">
-                        </label>
+
+                        <!-- Modern file picker: new media file -->
+                        <div class="file-field" data-file-field>
+                            <input type="file" name="file" id="replace-file" class="file-field-input" accept="<?= e($accept) ?>">
+                            <label for="replace-file" class="file-field-label">
+                                <span class="file-field-ic">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                                </span>
+                                <span class="file-field-text">
+                                    <span class="file-field-title">Choose a new <?= e($media['media_type']) ?> file</span>
+                                    <span class="file-field-name" data-file-name>No file selected</span>
+                                </span>
+                                <span class="file-field-btn">Browse</span>
+                            </label>
+                        </div>
+
                         <?php if ($needsThumb): ?>
-                        <label><span>New thumbnail (optional, recommended)</span>
-                            <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp">
-                        </label>
-                        <p class="form-hint">If you don't provide a thumbnail and the server can't auto-generate one, the existing thumbnail is kept.</p>
+                        <!-- Modern file picker: thumbnail (required when replacing) -->
+                        <div class="file-field" data-file-field>
+                            <input type="file" name="thumbnail" id="replace-thumb" class="file-field-input" accept="image/jpeg,image/png,image/webp">
+                            <label for="replace-thumb" class="file-field-label">
+                                <span class="file-field-ic">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 16l5-5 4 4 4-3 5 4"/><circle cx="9" cy="9" r="1.5"/></svg>
+                                </span>
+                                <span class="file-field-text">
+                                    <span class="file-field-title">Thumbnail image <em class="req-tag">required when replacing</em></span>
+                                    <span class="file-field-name" data-file-name>JPG · PNG · WEBP</span>
+                                </span>
+                                <span class="file-field-btn">Browse</span>
+                            </label>
+                        </div>
                         <?php endif; ?>
                     </div>
                 </div>

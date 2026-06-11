@@ -138,6 +138,20 @@ CREATE TABLE `tags` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- COMPANIES  (optional brand/company a media item belongs to)
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `companies`;
+CREATE TABLE `companies` (
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`       VARCHAR(191) NOT NULL,
+    `slug`       VARCHAR(191) NOT NULL,
+    `is_active`  TINYINT(1) NOT NULL DEFAULT 1,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_companies_slug` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- MEDIA  (single source of truth - never duplicated physically)
 -- ---------------------------------------------------------------------
 DROP TABLE IF EXISTS `media`;
@@ -145,6 +159,7 @@ CREATE TABLE `media` (
     `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `uuid`          CHAR(36) NOT NULL,
     `section_id`    TINYINT UNSIGNED NOT NULL,
+    `company_id`    INT UNSIGNED NULL,
     `title`         VARCHAR(255) NOT NULL,
     `description`   TEXT NULL,
     `keywords`      TEXT NULL,
@@ -173,12 +188,14 @@ CREATE TABLE `media` (
     UNIQUE KEY `uq_media_uuid` (`uuid`),
     UNIQUE KEY `uq_media_hash` (`file_hash`),
     KEY `idx_media_section`   (`section_id`),
+    KEY `idx_media_company`   (`company_id`),
     KEY `idx_media_type`      (`media_type`),
     KEY `idx_media_uploader`  (`uploaded_by`),
     KEY `idx_media_created`   (`created_at`),
     KEY `idx_media_featured`  (`is_featured`),
     FULLTEXT KEY `ft_media_search` (`title`,`description`,`keywords`),
     CONSTRAINT `fk_media_section`   FOREIGN KEY (`section_id`)  REFERENCES `sections`(`id`),
+    CONSTRAINT `fk_media_company`   FOREIGN KEY (`company_id`)  REFERENCES `companies`(`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_media_uploader`  FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
