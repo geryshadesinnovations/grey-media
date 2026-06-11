@@ -1,6 +1,6 @@
 <?php
 /** @var string|null $error */
-/** @var string $email */
+/** @var string $username */
 $this->extend('layouts/auth');
 ?>
 <section class="auth-card glass">
@@ -17,8 +17,10 @@ $this->extend('layouts/auth');
     <form method="post" action="<?= url('/login') ?>" class="auth-form">
         <?= \App\Core\Csrf::field() ?>
         <label>
-            <span>Email address</span>
-            <input type="email" name="email" value="<?= e($email) ?>" required autocomplete="username" autofocus placeholder="you@company.com">
+            <span>Username</span>
+            <input type="text" name="username" value="<?= e($username) ?>" required autocomplete="username" autofocus
+                   inputmode="text" pattern="[A-Za-z0-9]+" title="Letters and numbers only"
+                   placeholder="e.g. GSIPL01">
         </label>
         <label class="password-field">
             <span>Password</span>

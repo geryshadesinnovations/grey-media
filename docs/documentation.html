@@ -236,13 +236,19 @@
       <h3>Main features</h3>
       <div class="tablewrap"><table>
         <tr><th>Feature</th><th>What it means for a normal user</th></tr>
-        <tr><td>Secure login</td><td>Only invited staff with an email + password can enter. Too many wrong tries are blocked.</td></tr>
+        <tr><td>Secure login</td><td>Only invited staff with a username + password can enter. Too many wrong tries are blocked.</td></tr>
         <tr><td>Dashboard &amp; search</td><td>A Pinterest-style grid of media with filters (section, category, type, company) and a smart search box.</td></tr>
         <tr><td>Categories &amp; occasions</td><td>Files are filed under nested categories (e.g. <i>Art → Videos → Invitation Videos</i>) and tagged with occasions (e.g. <i>Diwali</i>).</td></tr>
         <tr><td>Upload</td><td>Drag-and-drop upload with a progress bar; the same file is never stored twice.</td></tr>
         <tr><td>Viewers</td><td>Built-in players for video (with quality selector), PDF, PowerPoint and images.</td></tr>
-        <tr><td>Watermark &amp; protection</td><td>A moving label with the viewer's name/email is painted over media; right-click and dev-tools shortcuts are discouraged.</td></tr>
-        <tr><td>Admin panel</td><td>Manage users, categories, companies, view activity logs and see who is online right now.</td></tr>
+        <tr><td>Favorites</td><td>Each user can "like" any video, image, PDF or PPT; their personal Favorites page lists them and the categories they follow.</td></tr>
+        <tr><td>Follow categories &amp; notifications</td><td>An in-app bell notifies users about new uploads in sections they can access, share-link events and download approvals. Viewed notifications auto-clear after 24 hours.</td></tr>
+        <tr><td>Expiring share links</td><td>Generate a secure, password-free public link to a single item that stops working after a chosen time.</td></tr>
+        <tr><td>Download requests</td><td>When direct download is off, a user can request access; an admin approves it, granting a one-time download link.</td></tr>
+        <tr><td>Replace media file</td><td>In Edit Media, swap the underlying file (video→video, etc.) while keeping all metadata, favorites, views and shares; replacements run the full processing pipeline (incl. video quality renditions).</td></tr>
+        <tr><td>Related media &amp; analytics</td><td>Detail pages suggest related items; admins get an analytics dashboard (views/downloads/uploads trends, storage, top content) with CSV export.</td></tr>
+        <tr><td>Watermark &amp; protection</td><td>A moving label with the viewer's name is painted over media; right-click and dev-tools shortcuts are discouraged.</td></tr>
+        <tr><td>Admin panel</td><td>Manage users, categories, companies, review download requests, view activity logs and see who is online right now.</td></tr>
       </table></div>
 
       <h3>User types (roles)</h3>
@@ -435,12 +441,8 @@
 │   └── config.php            ← reads .env and exposes settings to the app
 │
 ├── database/
-│   ├── schema.sql            ← creates all tables (run once)
-│   ├── seed.sql              ← fills starter data (roles, admin, categories)
-│   └── migrations/           ← later database changes
-│       ├── 2026_05_20_hybrid_subcategories.sql
-│       ├── 2026_05_20_backfill_media_category_ancestors.sql
-│       └── 2026_05_22_companies.sql
+│   ├── schema.sql            ← creates ALL tables (run once) — migrations merged in
+│   └── seed.sql              ← fills starter data (roles, admin, full category trees)
 │
 ├── public/                   ← THE ONLY PUBLIC FOLDER (the website root)
 │   ├── index.php             ← the single "front door" every request enters
@@ -813,13 +815,10 @@
       <h3>4.8 — Database scripts (<code>database/</code>)</h3>
       <div class="tablewrap"><table>
         <tr><th>File</th><th>Purpose</th></tr>
-        <tr><td><code>schema.sql</code></td><td>Creates every table, index and relationship. Run once on a fresh database.</td></tr>
-        <tr><td><code>seed.sql</code></td><td>Inserts starter data: 4 roles, permissions, the default super admin, both sections, the full category trees and ~67 occasions.</td></tr>
-        <tr><td><code>migrations/…hybrid_subcategories.sql</code></td><td>Adds occasion-based subcategories under “Hybrid”.</td></tr>
-        <tr><td><code>migrations/…backfill_media_category_ancestors.sql</code></td><td>Back-fills older media so parent categories are attached (so filters work).</td></tr>
-        <tr><td><code>migrations/…companies.sql</code></td><td>Adds the <code>companies</code> table and links media to a company.</td></tr>
+        <tr><td><code>schema.sql</code></td><td>Creates every table, index and relationship — including <code>companies</code>, <code>favorites</code>, <code>share_links</code>, <code>download_requests</code>, <code>notifications</code> and <code>category_follows</code>. Run once on a fresh database.</td></tr>
+        <tr><td><code>seed.sql</code></td><td>Inserts starter data: roles, permissions, the default super admin, both sections, and the full category trees (Gimmick / Art / Hybrid incl. all medical-day, festival &amp; wellness subcategories).</td></tr>
       </table></div>
-      <div class="cal warn"><div class="t">🟠 Important</div>The <code>companies</code> table lives in a <i>migration</i>, not in <code>schema.sql</code>. On a brand-new database, run <code>schema.sql</code>, then <code>seed.sql</code>, then all migration files in date order.</div>
+      <div class="cal ok"><div class="t">🟢 Single source of truth</div>All earlier one-off migrations have been merged into <code>schema.sql</code> and <code>seed.sql</code>. On a brand-new database simply run <code>schema.sql</code> then <code>seed.sql</code> — there are no separate migration files to apply.</div>
     </section>
 
 
@@ -955,7 +954,7 @@ erDiagram
         <div class="tablewrap"><table>
           <tr><th>Column</th><th>Meaning</th></tr>
           <tr><td><code>id</code></td><td>Unique number for each user.</td></tr>
-          <tr><td><code>name, email</code></td><td>Display name and login email (email is unique).</td></tr>
+          <tr><td><code>name, username</code></td><td>Display name and unique login username (letters &amp; numbers only).</td></tr>
           <tr><td><code>password_hash</code></td><td>The password stored <i>scrambled</i> (bcrypt) — never in plain text.</td></tr>
           <tr><td><code>role_id</code></td><td>Points to a row in <code>roles</code>.</td></tr>
           <tr><td><code>can_graphics, can_events</code></td><td>Section access switches.</td></tr>
@@ -963,7 +962,7 @@ erDiagram
           <tr><td><code>is_active</code></td><td>0 = deactivated (can't log in).</td></tr>
           <tr><td><code>last_login_at, last_login_ip, created_at, updated_at</code></td><td>Bookkeeping.</td></tr>
         </table></div>
-        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", email: "admin@greyshades.local", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
+        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", username: "admin", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
       </div></details>
 
       <details class="box"><summary>roles &amp; permissions — what each role means</summary><div class="body">

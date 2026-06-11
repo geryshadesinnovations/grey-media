@@ -8,9 +8,13 @@ use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\Database;
 use App\Core\StreamToken;
+use App\Models\CategoryFollow;
 use App\Models\Company;
+use App\Models\DownloadRequest;
+use App\Models\Favorite;
 use App\Models\Media;
 use App\Models\Section;
+use App\Services\MediaProcessor;
 
 final class MediaController
 {
@@ -41,14 +45,26 @@ final class MediaController
         // Issue a short-lived stream/download token for this media
         $streamToken = StreamToken::issue((int) $m['id']);
 
+        $userId      = (int) Auth::id();
+        $canDownload = $this->isDownloadable($m);
+        // Approved single-use token waiting to be used (drives the "Download
+        // (approved)" button), and any pending request state for the UI.
+        $approved    = DownloadRequest::usableFor($userId, (int) $m['id']);
+
         echo view('media/show', [
             'media'        => $m,
             'section'      => $section,
             'categories'   => Media::categoriesFor((int) $m['id']),
             'streamToken'  => $streamToken,
-            'canDownload'  => $this->isDownloadable($m),
+            'canDownload'  => $canDownload,
             'canEdit'      => Auth::canEdit() || Auth::isSuperAdmin(),
             'canDelete'    => Auth::canDelete() || Auth::isSuperAdmin(),
+            'isFavorite'   => Favorite::isFavorite($userId, (int) $m['id']),
+            'related'      => Media::related((int) $m['id'], Auth::allowedSections(), 8),
+            'favIds'       => Favorite::idsForUser($userId),
+            'followedCats' => CategoryFollow::followedIds($userId),
+            'approvedToken'  => $approved['token'] ?? null,
+            'hasPendingReq'  => DownloadRequest::hasPending($userId, (int) $m['id']),
         ]);
     }
 
@@ -92,6 +108,14 @@ final class MediaController
             'is_pinned'       => !empty($_POST['is_pinned']),
             'company_id'      => !empty($_POST['company_id']) ? (int) $_POST['company_id'] : null,
         ]);
+
+        // Optional: replace the underlying file with a new one of the SAME
+        // media type. All metadata + relationships (favorites, shares, views,
+        // categories, download requests) stay intact because we keep the same
+        // media row id and uuid. May redirect on validation error.
+        if (!empty($_FILES['file']) && (int) ($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $this->handleFileReplacement($id, $m);
+        }
 
         // Re-attach categories with full ancestor expansion (same logic as upload)
         if (isset($_POST['categories'])) {
@@ -137,21 +161,19 @@ final class MediaController
         redirect('/dashboard');
     }
 
+    /**
+     * Whether the CURRENT user can directly download this item.
+     *
+     * The media's own "Allow downloads" flag is the gate: when it's on (and any
+     * download window hasn't lapsed) every user who can view the item gets the
+     * direct download. When it's off, only super admins can (everyone else uses
+     * the request/approval workflow). This keeps the button state in lockstep
+     * with the latest media settings the moment an admin toggles it.
+     */
     private function isDownloadable(array $m): bool
     {
-        if (!Auth::canDownload() && !Auth::isSuperAdmin()) {
-            // Maybe granted explicitly
-            $granted = Database::scalar(
-                "SELECT 1 FROM media_download_grants
-                 WHERE media_id = ? AND user_id = ?
-                 AND (expires_at IS NULL OR expires_at > NOW())",
-                [$m['id'], Auth::id()]
-            );
-            if (!$granted) return false;
-        }
-        if (!$m['is_downloadable']) {
-            return Auth::isSuperAdmin();
-        }
+        if (Auth::isSuperAdmin()) return true;
+        if (empty($m['is_downloadable'])) return false;
         if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) {
             return false;
         }
@@ -165,5 +187,168 @@ final class MediaController
             $out[$s['code']] = \App\Models\Category::tree((int) $s['id']);
         }
         return $out;
+    }
+
+    /**
+     * Replace the underlying file during edit. The new file MUST be the same
+     * media type (video->video, pdf->pdf, etc.). Keeps the media row's id/uuid
+     * and every relationship, so favorites/shares/views/categories survive.
+     * Flashes an error and redirects back if validation fails.
+     */
+    private function handleFileReplacement(int $id, array $m): void
+    {
+        $back = '/media/' . $m['uuid'];
+        $file = $_FILES['file'];
+        if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+            flash('error', 'File replacement failed (upload error ' . (int) $file['error'] . ').');
+            redirect($back);
+        }
+
+        $mime = $this->detectMime($file['tmp_name'], (string) $file['name']);
+        if ($mime === 'image/jpg') $mime = 'image/jpeg';
+        $allowed = (array) config('media.allowed_mimes', []);
+        if (!in_array($mime, $allowed, true)) {
+            flash('error', 'File type not allowed: ' . $mime);
+            redirect($back);
+        }
+
+        $newType = MediaProcessor::classify($mime);
+        if ($newType !== $m['media_type']) {
+            flash('error', 'The replacement must be the same media type as the original ('
+                . strtoupper((string) $m['media_type']) . '). You uploaded a ' . strtoupper($newType) . '.');
+            redirect($back);
+        }
+
+        // A thumbnail is COMPULSORY when replacing a video / ppt / pdf file.
+        $needsThumb = in_array($newType, ['video', 'ppt', 'pdf'], true);
+        $thumbOk    = !empty($_FILES['thumbnail']) && (int) ($_FILES['thumbnail']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
+        $thumbMime  = $thumbOk ? (mime_content_type($_FILES['thumbnail']['tmp_name']) ?: '') : '';
+        if ($needsThumb) {
+            if (!$thumbOk) {
+                flash('error', 'A thumbnail image is required when replacing a ' . strtoupper($newType) . ' file.');
+                redirect($back);
+            }
+            if (!in_array($thumbMime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                flash('error', 'The thumbnail must be a JPG, PNG or WEBP image.');
+                redirect($back);
+            }
+        }
+
+        // Store the new original under the SAME uuid (random suffix so we never
+        // clobber the old file before the DB switch / cleanup).
+        $uuid   = (string) $m['uuid'];
+        $ext    = $this->extFor($mime, (string) $file['name']);
+        $relDir = '/uploads/originals/' . date('Y/m');
+        $absDir = storage_path($relDir);
+        if (!is_dir($absDir)) @mkdir($absDir, 0775, true);
+        $relPath = $relDir . '/' . $uuid . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $absPath = storage_path($relPath);
+        if (!move_uploaded_file($file['tmp_name'], $absPath)) {
+            flash('error', 'Could not store the replacement file.');
+            redirect($back);
+        }
+
+        // Dedup hash, but never collide with another media row's unique hash.
+        $hash = hash_file('sha256', $absPath) ?: null;
+        if ($hash) {
+            $other = Media::findByHash($hash);
+            if ($other && (int) $other['id'] !== $id) $hash = null;
+        }
+
+        // Clear stale HLS segments for this uuid FIRST, so the same pipeline as
+        // upload regenerates a fresh adaptive ladder into /uploads/hls/<uuid>.
+        // (This is what was missing: previously the new segments were generated
+        // and then deleted again, so replaced videos lost the quality selector.)
+        if ($newType === 'video') {
+            $hlsDirAbs = storage_path('/uploads/hls/' . $uuid);
+            if (is_dir($hlsDirAbs)) {
+                foreach (glob($hlsDirAbs . '/*') ?: [] as $f) { if (is_file($f)) @unlink($f); }
+            }
+        }
+
+        // Regenerate ALL derived assets via the exact same routine uploads use
+        // (thumbnail, pdf/ppt preview, HLS renditions, duration, dimensions).
+        [$thumbRel, $previewRel, $hlsRel, $duration, $w, $h] =
+            MediaProcessor::deriveAll($absPath, $mime, $newType, $uuid);
+
+        // Store the (mandatory for video/ppt/pdf) custom thumbnail; it wins.
+        $customThumbRel = null;
+        if ($thumbOk && in_array($thumbMime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            $tdir = '/uploads/thumbnails/' . date('Y/m');
+            if (!is_dir(storage_path($tdir))) @mkdir(storage_path($tdir), 0775, true);
+            $text = $thumbMime === 'image/png' ? 'png' : ($thumbMime === 'image/webp' ? 'webp' : 'jpg');
+            $customThumbRel = $tdir . '/' . $uuid . '-custom-' . bin2hex(random_bytes(3)) . '.' . $text;
+            move_uploaded_file($_FILES['thumbnail']['tmp_name'], storage_path($customThumbRel));
+        }
+
+        // Build the column set. The original file, size, mime and HLS are always
+        // replaced (a null hls_master makes the player fall back to MP4).
+        // Thumbnail/preview/dimensions are only overwritten when produced, so we
+        // never wipe a good existing thumbnail when none could be generated.
+        $finalThumb = $customThumbRel ?? $thumbRel;
+        $update = [
+            'mime_type'  => $mime,
+            'media_type' => $newType,
+            'file_path'  => $relPath,
+            'file_size'  => filesize($absPath) ?: 0,
+            'file_hash'  => $hash,
+            'hls_master' => $hlsRel,
+        ];
+        if ($finalThumb !== null) $update['thumbnail_path'] = $finalThumb;
+        if ($previewRel !== null) $update['preview_path']  = $previewRel;
+        $update['duration_sec'] = $duration;
+        if ($w !== null) $update['width']  = $w;
+        if ($h !== null) $update['height'] = $h;
+
+        Media::updateFile($id, $update);
+
+        // ---- Clean up files we no longer reference (best effort) ----
+        // We deliberately do NOT touch /uploads/hls/<uuid>: it now holds the
+        // freshly generated segments for the SAME uuid.
+        $keep = array_filter([$relPath, $finalThumb, $previewRel]);
+        // If a custom thumbnail replaced an auto-generated one, drop the orphan.
+        if ($thumbRel && $thumbRel !== $finalThumb && $thumbRel !== $previewRel) {
+            $a = storage_path($thumbRel);
+            if (is_file($a)) @unlink($a);
+        }
+        foreach (['file_path', 'thumbnail_path', 'preview_path'] as $col) {
+            $old = $m[$col] ?? null;
+            if ($old && !in_array($old, $keep, true)) {
+                $abs = storage_path($old);
+                if (is_file($abs)) @unlink($abs);
+            }
+        }
+
+        ActivityLog::record('media.replace_file', 'media', $id, ['mime' => $mime, 'type' => $newType]);
+    }
+
+    private function detectMime(string $path, string $name): string
+    {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime  = $finfo ? (finfo_file($finfo, $path) ?: '') : '';
+        if ($finfo) finfo_close($finfo);
+
+        $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+        if ($ext === 'pptx' && in_array($mime, ['application/zip', 'application/x-zip-compressed'], true)) {
+            return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        }
+        if ($ext === 'ppt' && $mime === 'application/octet-stream') return 'application/vnd.ms-powerpoint';
+        return $mime ?: 'application/octet-stream';
+    }
+
+    private function extFor(string $mime, string $orig): string
+    {
+        $orig = strtolower((string) pathinfo($orig, PATHINFO_EXTENSION));
+        return match ($mime) {
+            'video/mp4'   => 'mp4',
+            'image/png'   => 'png',
+            'image/jpeg'  => 'jpg',
+            'image/webp'  => 'webp',
+            'image/gif'   => 'gif',
+            'application/pdf' => 'pdf',
+            'application/vnd.ms-powerpoint' => 'ppt',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+            default => $orig ?: 'bin',
+        };
     }
 }

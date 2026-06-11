@@ -31,6 +31,8 @@ $renderRootCard = function (array $node, string $sectionName, string $sectionCod
     echo '<span class="cat-card-section">' . e($sectionName) . '</span>';
     echo '<span class="cat-card-count" hidden>0</span>';
     echo '</button>';
+    // Inline message shown when this card is disabled by mutual-exclusion.
+    if ($exclusiveGroup) echo '<div class="cat-card-msg" hidden></div>';
 
     // Body (scrollable) — only subcategories, no "All <Root>" checkbox
     echo '<div class="cat-card-body">';
@@ -181,18 +183,16 @@ foreach ($sections as $s) {
                 </div>
             </div>
 
-            <!-- Section 2: Where does this go? (categories) -->
+            <!-- Section 2: Categories -->
             <div class="form-section">
                 <div class="form-section-title">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    Where does this go?
+                    Categories
                 </div>
                 <div class="form-section-body">
                     <p class="form-hint">
-                        Pick the specific subcategories your file belongs to — the parent
-                        category (Gimmick / Art / Hybrid / Events) is assigned automatically.
-                        <br><strong>Note:</strong> Gimmick and Art are mutually exclusive — Hybrid and Events can mix freely.
-                        Hybrid subcategories already cover all occasions (medical days, national festivals, etc.), so there's no separate Occasion picker.
+                        Pick the subcategories this file belongs to — the parent category is assigned automatically.
+                        Gimmick and Art are mutually exclusive; Hybrid and Events can mix freely.
                     </p>
 
                     <div id="cat-summary" class="cat-summary" hidden>

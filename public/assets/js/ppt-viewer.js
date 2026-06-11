@@ -8,6 +8,16 @@
  * The file is fetched same-origin via the short-lived stream token, so the
  * private storage rules and audit trail are preserved.
  *
+ * Presentation experience:
+ *   - One slide is shown at a time, with Previous / Next controls (and the
+ *     keyboard arrows) to move between slides - a proper presentation mode.
+ *   - Each slide is scaled to fit the stage (both width AND height), so a
+ *     presentation always opens fully fitted with no overflow, even on phones.
+ *   - PPTXjs lays text out in absolutely-positioned boxes at their authored
+ *     pixel coordinates; we keep that intact (see the scoped box-model reset in
+ *     app.css) so text lands exactly where PowerPoint placed it instead of
+ *     wrapping/shifting.
+ *
  * PPTXjs + its dependencies are loaded lazily from the CDN. If anything fails
  * (offline CDN, a legacy binary .ppt that PPTXjs can't parse, etc.) we degrade
  * gracefully to a clear message instead of breaking the page.
@@ -76,66 +86,201 @@
 
             $('#ppt-viewer').pptxToHtml({
                 pptxFileUrl: fileUrl,
-                slideMode: false,      // stack every slide so the user can scroll
+                slideMode: false,      // render every slide; we drive the nav ourselves
                 keyBoardShortCut: false,
                 mediaProcess: false,
             });
 
-            // PPTXjs renders asynchronously; hide the loader once slides appear.
             const stage = document.getElementById('ppt-viewer');
-            const wrap = stage.closest('.ppt-viewer-wrap') || stage.parentElement;
+            const wrap  = stage.closest('.ppt-viewer-wrap') || stage.parentElement;
 
-            // Scale each fixed-width slide down to fit the container width, so
-            // presentations open fully fitted on mobile (no horizontal scroll).
-            // We capture each slide's natural width once, then use CSS `zoom`
-            // (which reflows the layout box, unlike transform) to fit.
-            const fitSlides = () => {
-                const avail = (wrap ? wrap.clientWidth : stage.clientWidth) - 24;
-                if (avail <= 0) return;
-                stage.querySelectorAll('.slide').forEach((sl) => {
-                    if (!sl.dataset.naturalW) {
-                        sl.style.zoom = '';
-                        sl.dataset.naturalW = String(parseFloat(sl.style.width) || sl.offsetWidth || 960);
-                    }
-                    const nat = parseFloat(sl.dataset.naturalW) || 960;
-                    sl.style.zoom = String(Math.min(1, avail / nat));
-                });
+            // ---- Presentation state ------------------------------------------------
+            let holders = [];     // one .ppt-slide-holder per slide (direct children)
+            let current = 0;      // index of the visible slide
+            let nav = null, prevBtn = null, nextBtn = null, counter = null, fsBtn = null;
+
+            const ICON = {
+                left:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+                right: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+                enter: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>',
+                exit:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3m13-5h-3a2 2 0 0 0-2 2v3"/></svg>',
             };
-            let fitTimer = null;
-            window.addEventListener('resize', () => {
-                clearTimeout(fitTimer);
-                fitTimer = setTimeout(fitSlides, 150);
-            });
 
-            const done = () => {
-                if (stage.childElementCount > 0) {
-                    if (status && status.parentNode) status.remove();
-                    fitSlides();
-                    return true;
+            const onKey = (e) => {
+                if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+                if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(current - 1); }
+                else if (e.key === 'ArrowRight' || e.key === 'PageDown') { go(current + 1); }
+            };
+
+            // ---- Fullscreen --------------------------------------------------------
+            const fsEnabled = !!(wrap.requestFullscreen || wrap.webkitRequestFullscreen);
+            const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+            const inFullscreen = () => fsElement() === wrap;
+
+            const toggleFullscreen = () => {
+                if (inFullscreen()) {
+                    (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
+                } else {
+                    (wrap.requestFullscreen || wrap.webkitRequestFullscreen || (() => {})).call(wrap);
                 }
-                return false;
             };
-            done();
-            // PPTXjs adds slides one-by-one; keep fitting as they appear, and
-            // fit again once rendering settles.
+
+            const updateFsBtn = () => {
+                if (!fsBtn) return;
+                const on = inFullscreen();
+                fsBtn.innerHTML = (on ? ICON.exit : ICON.enter) +
+                    '<span class="ppt-label">' + (on ? 'Exit' : 'Fullscreen') + '</span>';
+                fsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'View fullscreen');
+            };
+
+            const onFsChange = () => {
+                wrap.classList.toggle('is-fullscreen', inFullscreen());
+                updateFsBtn();
+                // The stage size changes after the transition; re-fit shortly after.
+                setTimeout(() => fit(holders[current]), 80);
+            };
+
+            const buildNav = () => {
+                if (nav) return;
+                nav = document.createElement('div');
+                nav.className = 'ppt-nav';
+
+                const center = document.createElement('div');
+                center.className = 'ppt-center';
+
+                prevBtn = document.createElement('button');
+                prevBtn.type = 'button';
+                prevBtn.setAttribute('aria-label', 'Previous slide');
+                prevBtn.innerHTML = ICON.left + '<span class="ppt-label">Previous</span>';
+
+                counter = document.createElement('span');
+                counter.className = 'ppt-count';
+
+                nextBtn = document.createElement('button');
+                nextBtn.type = 'button';
+                nextBtn.setAttribute('aria-label', 'Next slide');
+                nextBtn.innerHTML = '<span class="ppt-label">Next</span>' + ICON.right;
+
+                center.append(prevBtn, counter, nextBtn);
+                nav.append(center);
+
+                if (fsEnabled) {
+                    fsBtn = document.createElement('button');
+                    fsBtn.type = 'button';
+                    fsBtn.className = 'ppt-fs';
+                    nav.append(fsBtn);
+                    updateFsBtn();
+                    fsBtn.addEventListener('click', toggleFullscreen);
+                    document.addEventListener('fullscreenchange', onFsChange);
+                    document.addEventListener('webkitfullscreenchange', onFsChange);
+                }
+
+                wrap.insertBefore(nav, stage);
+
+                prevBtn.addEventListener('click', () => go(current - 1));
+                nextBtn.addEventListener('click', () => go(current + 1));
+                window.addEventListener('keydown', onKey);
+            };
+
+            // Wrap each freshly-rendered slide in a holder and flatten the
+            // markup so every holder is a direct child of the stage (PPTXjs may
+            // nest slides inside a wrapper). Idempotent - safe to call repeatedly
+            // as PPTXjs streams slides in.
+            const collectSlides = () => {
+                stage.querySelectorAll('.slide').forEach((sl) => {
+                    if (sl.dataset.wrapped) return;
+                    sl.dataset.natW = String(parseFloat(sl.style.width) || sl.offsetWidth || 960);
+                    sl.dataset.natH = String(parseFloat(sl.style.height) || sl.offsetHeight || 540);
+                    const holder = document.createElement('div');
+                    holder.className = 'ppt-slide-holder';
+                    sl.parentNode.insertBefore(holder, sl);
+                    holder.appendChild(sl);
+                    sl.dataset.wrapped = '1';
+                });
+                // Hoist any holder that ended up nested to be a direct child.
+                stage.querySelectorAll('.ppt-slide-holder').forEach((h) => {
+                    if (h.parentNode !== stage) stage.appendChild(h);
+                });
+                // Drop now-empty wrapper divs PPTXjs left behind (keeps the grid
+                // centering exact).
+                Array.from(stage.children).forEach((ch) => {
+                    if (!ch.classList.contains('ppt-slide-holder') &&
+                        ch.tagName === 'DIV' && ch.children.length === 0) {
+                        ch.remove();
+                    }
+                });
+                holders = Array.from(stage.querySelectorAll(':scope > .ppt-slide-holder'));
+            };
+
+            // Scale the given slide to fit the stage in BOTH dimensions, so it
+            // never overflows. Uniform scale => no distortion.
+            const fit = (holder) => {
+                if (!holder) return;
+                const sl = holder.querySelector('.slide');
+                if (!sl) return;
+                const natW = parseFloat(sl.dataset.natW) || 960;
+                const natH = parseFloat(sl.dataset.natH) || 540;
+                const availW = Math.max(40, stage.clientWidth - 24);
+                const availH = Math.max(40, stage.clientHeight - 24);
+                const scale = Math.min(availW / natW, availH / natH);
+                sl.style.transformOrigin = 'top left';
+                sl.style.transform = 'scale(' + scale + ')';
+                holder.style.width  = (natW * scale) + 'px';
+                holder.style.height = (natH * scale) + 'px';
+            };
+
+            const render = () => {
+                if (!holders.length) return;
+                current = Math.max(0, Math.min(current, holders.length - 1));
+                holders.forEach((h, i) => { h.style.display = (i === current) ? 'block' : 'none'; });
+                fit(holders[current]);
+                if (counter) counter.textContent = (current + 1) + ' / ' + holders.length;
+                if (prevBtn) prevBtn.disabled = current === 0;
+                if (nextBtn) nextBtn.disabled = current === holders.length - 1;
+            };
+
+            const go = (i) => {
+                if (!holders.length || i < 0 || i > holders.length - 1) return;
+                current = i;
+                render();
+                stage.scrollTop = 0;
+                stage.scrollLeft = 0;
+            };
+
+            const refresh = () => {
+                collectSlides();
+                if (holders.length) {
+                    buildNav();
+                    if (status && status.parentNode) status.remove();
+                    render();
+                }
+            };
+
+            // Initial pass, then keep up as PPTXjs adds slides one-by-one.
+            refresh();
             let settle = null;
             const observer = new MutationObserver(() => {
-                if (stage.childElementCount > 0 && status && status.parentNode) status.remove();
-                fitSlides();
+                refresh();
                 clearTimeout(settle);
-                settle = setTimeout(fitSlides, 150);
+                settle = setTimeout(refresh, 150);
             });
             observer.observe(stage, { childList: true, subtree: true });
 
-            // Safety timeout: if nothing rendered, surface a message; otherwise
+            // Keep the active slide fitted on resize / orientation change.
+            let fitTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(fitTimer);
+                fitTimer = setTimeout(() => fit(holders[current]), 150);
+            });
+
+            // Safety timeout: surface a message if nothing rendered; otherwise
             // stop observing and do a final fit.
             setTimeout(() => {
                 observer.disconnect();
-                if (stage.childElementCount === 0) {
+                if (!holders.length && stage.querySelectorAll('.slide').length === 0) {
                     showMessage('This presentation could not be displayed. If you have permission, you can download the original file instead.');
                 } else {
-                    if (status && status.parentNode) status.remove();
-                    fitSlides();
+                    refresh();
                 }
             }, 20000);
         } catch (err) {

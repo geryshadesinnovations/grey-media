@@ -14,7 +14,7 @@ $this->extend('layouts/app');
             <?php foreach ($rows as $r): ?>
                 <tr>
                     <td><?= e($r['created_at']) ?></td>
-                    <td><?= e($r['user_name'] ?? '—') ?><br><small class="muted"><?= e($r['user_email'] ?? '') ?></small></td>
+                    <td><?= e($r['user_name'] ?? '—') ?><br><small class="muted"><?= e($r['user_username'] ?? '') ?></small></td>
                     <td><span class="badge soft"><?= e($r['action']) ?></span></td>
                     <td><?= e(($r['entity_type'] ?? '') . ($r['entity_id'] ? ' #' . $r['entity_id'] : '')) ?></td>
                     <td><code><?= e($r['ip_address']) ?></code></td>

@@ -25,20 +25,85 @@ final class User
         );
     }
 
+    /**
+     * Active user ids who can access ANY of the given section codes.
+     * Mirrors Auth's rules: super admins see everything; otherwise the
+     * per-user can_graphics / can_events flags gate each section.
+     *
+     * @param array<int,string> $sectionCodes
+     * @return array<int,int>
+     */
+    public static function idsWithSectionAccess(array $sectionCodes): array
+    {
+        $codes = array_values(array_unique(array_filter($sectionCodes)));
+        if (!$codes) return [];
+
+        $conds = ["r.code = 'super_admin'"];
+        if (in_array('graphics', $codes, true)) $conds[] = "u.can_graphics = 1";
+        if (in_array('events', $codes, true))   $conds[] = "u.can_events = 1";
+
+        $rows = Database::all(
+            "SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
+             WHERE u.is_active = 1 AND (" . implode(' OR ', $conds) . ")"
+        );
+        return array_map(static fn ($r) => (int) $r['id'], $rows);
+    }
+
     public static function roles(): array
     {
         return Database::all("SELECT * FROM roles ORDER BY id");
+    }
+
+    /**
+     * Active users who can review download requests: super admins, plus anyone
+     * with the can_manage_users flag.
+     *
+     * @return array<int,int>
+     */
+    public static function adminIds(): array
+    {
+        $rows = Database::all(
+            "SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
+             WHERE u.is_active = 1 AND (r.code = 'super_admin' OR u.can_manage_users = 1)"
+        );
+        return array_map(static fn ($r) => (int) $r['id'], $rows);
+    }
+
+    /**
+     * Usernames are the login identifier: letters and numbers only, 3-64 chars.
+     */
+    public static function isValidUsername(string $username): bool
+    {
+        return (bool) preg_match('/^[A-Za-z0-9]{3,64}$/', $username);
+    }
+
+    /**
+     * True when the username is already taken (case-insensitive), optionally
+     * ignoring a given user id (used when editing an existing user).
+     */
+    public static function usernameExists(string $username, ?int $exceptId = null): bool
+    {
+        if ($exceptId !== null) {
+            return (bool) Database::scalar(
+                "SELECT 1 FROM users WHERE username = ? AND id <> ? LIMIT 1",
+                [$username, $exceptId]
+            );
+        }
+        return (bool) Database::scalar(
+            "SELECT 1 FROM users WHERE username = ? LIMIT 1",
+            [$username]
+        );
     }
 
     public static function create(array $data): int
     {
         Database::execute(
             "INSERT INTO users
-             (name, email, password_hash, role_id,
+             (name, username, password_hash, role_id,
               can_graphics, can_events, can_upload, can_edit, can_delete, can_download, can_manage_users, is_active)
              VALUES (?,?,?,?, ?,?,?,?,?,?,?, ?)",
             [
-                $data['name'], $data['email'],
+                $data['name'], $data['username'],
                 password_hash((string) $data['password'], PASSWORD_BCRYPT),
                 (int) $data['role_id'],
                 (int) ($data['can_graphics']     ?? 0),
@@ -58,7 +123,7 @@ final class User
     {
         $sets = []; $params = [];
         foreach ([
-            'name','email','role_id','can_graphics','can_events',
+            'name','username','role_id','can_graphics','can_events',
             'can_upload','can_edit','can_delete','can_download','can_manage_users','is_active'
         ] as $k) {
             if (array_key_exists($k, $data)) {

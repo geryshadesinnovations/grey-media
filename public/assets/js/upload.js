@@ -205,48 +205,49 @@
     });
     } // end file-picker wiring (upload page only)
 
-    /* ---------- Submit ---------- */
+    /* ---------- Validation feedback ---------- */
+    // Surfaces a friendly error as a toast (visible no matter how far the user
+    // has scrolled), scrolls to + highlights the offending field, and also
+    // mirrors the message inline near the dropzone when that element exists.
+    const failValidation = (target, msg, opts = {}) => {
+        if (window.gsToast) window.gsToast(msg, 'error');
+        if (result) { result.className = 'upload-result error'; result.textContent = msg; result.hidden = false; }
+        if (target) {
+            target.classList.add('field-invalid');
+            setTimeout(() => target.classList.remove('field-invalid'), 2600);
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (opts.focus && typeof target.focus === 'function') {
+                try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); }
+            }
+        }
+    };
+    // Back-compat alias used elsewhere.
+    const showError = (msg) => failValidation(null, msg);
+
+    /* ---------- Submit (upload page only) ---------- */
     if (submitBtn) {
         submitBtn.addEventListener('click', () => {
             if (!input.files?.length) {
-                drop.classList.add('dragover');
-                setTimeout(() => drop.classList.remove('dragover'), 600);
-                showError('Please pick a file to upload first.');
+                failValidation(drop, 'Please choose a file to upload first.');
                 return;
             }
-            // Use the document-wide query so we actually count the inputs that
-            // live in <aside class="upload-meta"> via the form attribute.
             const checked = [...catCheckboxes()].filter(cb => cb.checked).length;
             if (checked === 0) {
-                showError('Please pick at least one category.');
+                failValidation(document.querySelector('.cat-grid'), 'Please pick at least one category for this file.');
                 return;
             }
-            // Title is required on the form (HTML5 attribute) but double-check
             if (titleInput && !titleInput.value.trim()) {
-                titleInput.focus();
-                showError('Please enter a title.');
+                failValidation(titleInput, 'Please enter a title for this file.', { focus: true });
                 return;
             }
-            // Thumbnail is required for video / ppt / pdf
             const kind = fileType(input.files[0]);
             if (TYPES_NEEDING_THUMB.has(kind) && (!thumbInput || !thumbInput.files?.length)) {
-                if (thumbArea) {
-                    thumbArea.classList.add('dragover');
-                    setTimeout(() => thumbArea.classList.remove('dragover'), 600);
-                    thumbArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-                showError('Please upload a thumbnail image for this ' + kind.toUpperCase() + ' file.');
+                failValidation(thumbArea, 'A thumbnail image is required for this ' + kind.toUpperCase() + ' file. Please add one.');
                 return;
             }
             submit();
         });
     }
-
-    const showError = (msg) => {
-        result.className = 'upload-result error';
-        result.textContent = msg;
-        result.hidden = false;
-    };
 
     const submit = () => {
         const fd  = new FormData(form);
@@ -328,11 +329,16 @@
         });
     };
 
+    /** Display name for a root card by its slug (for exclusion messages). */
+    const cardName = (rootSlug) => {
+        const el = document.querySelector('.cat-card[data-cat-root="' + CSS.escape(rootSlug) + '"] .cat-card-name');
+        return el?.textContent?.trim() || rootSlug;
+    };
+
     /**
-     * When a card is "disabled" by the exclusion rule, dim it visually so the
-     * user understands why those checkboxes are off. The disabling is purely
-     * cosmetic - the user can still click items in the disabled card, which
-     * will then disable the previously-active card instead.
+     * When a card is "disabled" by the exclusion rule, dim it visually AND show
+     * an explicit message telling the user exactly what to unselect, e.g.
+     * "Please unselect Art to enable Gimmick."
      */
     const refreshCardStates = () => {
         const groupActiveRoots = new Map();
@@ -349,6 +355,19 @@
             const active = groupActiveRoots.get(group);
             const dim = active && active.size > 0 && !active.has(root);
             card.classList.toggle('dimmed', !!dim);
+
+            const msgEl = card.querySelector('.cat-card-msg');
+            if (msgEl) {
+                if (dim) {
+                    const activeRoot = [...active][0];
+                    const thisName = card.querySelector('.cat-card-name')?.textContent?.trim() || 'this category';
+                    msgEl.textContent = 'Please unselect ' + cardName(activeRoot) + ' to enable ' + thisName + '.';
+                    msgEl.hidden = false;
+                } else {
+                    msgEl.hidden = true;
+                    msgEl.textContent = '';
+                }
+            }
         });
     };
 
@@ -412,4 +431,57 @@
     // Initial paint
     refreshCardStates();
     refreshCounts();
+
+    /* ---------- Edit page: modern file pickers + replace validation ---------- */
+    // Reflect chosen filenames in the styled .file-field component.
+    document.querySelectorAll('.file-field-input').forEach(inp => {
+        inp.addEventListener('change', () => {
+            const field  = inp.closest('.file-field');
+            const nameEl = field?.querySelector('[data-file-name]');
+            const has    = !!inp.files?.length;
+            if (nameEl) {
+                nameEl.textContent = has
+                    ? inp.files[0].name
+                    : (inp.id === 'replace-thumb' ? 'JPG · PNG · WEBP' : 'No file selected');
+            }
+            field?.classList.toggle('has-file', has);
+            field?.classList.remove('field-invalid');
+        });
+    });
+
+    const editForm = document.getElementById('edit-form');
+    if (editForm) {
+        editForm.addEventListener('submit', (e) => {
+            const fileInput  = document.getElementById('replace-file');
+            const thumbInput2 = document.getElementById('replace-thumb');
+            const section    = document.getElementById('replace-section');
+            if (!fileInput || !section) return;
+
+            const replacing  = !!fileInput.files?.length;
+            const needsThumb = section.dataset.needsThumb === '1';
+            const type       = (section.dataset.mediaType || 'file').toUpperCase();
+
+            // Thumbnail is mandatory ONLY when actually replacing a video/ppt/pdf.
+            if (replacing && needsThumb && (!thumbInput2 || !thumbInput2.files?.length)) {
+                e.preventDefault();
+                // Undo the global progress bar / disabled button that the generic
+                // submit handler kicked off, since we're blocking this submit.
+                window.GSLoading?.finish?.();
+                setTimeout(() => {
+                    const btn = editForm.querySelector('button[type="submit"]');
+                    if (btn) { btn.disabled = false; btn.classList.remove('is-loading'); }
+                }, 10);
+
+                const target = thumbInput2?.closest('.file-field') || section;
+                if (window.gsToast) {
+                    window.gsToast('A thumbnail image is required when replacing a ' + type + ' file.', 'error');
+                }
+                if (target) {
+                    target.classList.add('field-invalid');
+                    setTimeout(() => target.classList.remove('field-invalid'), 2600);
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    }
 })();

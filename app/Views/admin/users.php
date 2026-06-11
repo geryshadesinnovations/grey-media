@@ -15,7 +15,7 @@ $this->extend('layouts/app');
             <form method="post" action="<?= url('/admin/users') ?>" class="grid-form">
                 <?= Csrf::field() ?>
                 <label><span>Name</span><input name="name" required></label>
-                <label><span>Email</span><input type="email" name="email" required></label>
+                <label><span>Username</span><input name="username" required pattern="[A-Za-z0-9]{3,64}" title="3-64 characters, letters and numbers only" placeholder="e.g. GSIPL01"></label>
                 <label><span>Password</span><input type="password" name="password" required minlength="8"></label>
                 <label class="select"><span>Role</span>
                     <select name="role_id" required>
@@ -47,7 +47,7 @@ $this->extend('layouts/app');
                 <tr>
                     <td>
                         <strong><?= e($u['name']) ?></strong><br>
-                        <small class="muted"><?= e($u['email']) ?></small>
+                        <small class="muted"><?= e($u['username']) ?></small>
                     </td>
                     <td><span class="badge soft"><?= e($u['role_name']) ?></span></td>
                     <td>
@@ -66,7 +66,7 @@ $this->extend('layouts/app');
                             <form method="post" action="<?= url('/admin/users/' . (int)$u['id']) ?>" class="grid-form mini">
                                 <?= Csrf::field() ?>
                                 <label><span>Name</span><input name="name" value="<?= e($u['name']) ?>"></label>
-                                <label><span>Email</span><input type="email" name="email" value="<?= e($u['email']) ?>"></label>
+                                <label><span>Username</span><input name="username" value="<?= e($u['username']) ?>" required pattern="[A-Za-z0-9]{3,64}" title="3-64 characters, letters and numbers only"></label>
                                 <label><span>New password</span><input type="password" name="password" placeholder="leave blank to keep"></label>
                                 <label class="select"><span>Role</span>
                                     <select name="role_id">

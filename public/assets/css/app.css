@@ -51,16 +51,32 @@ html[data-theme="light"] {
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+/* The root background paints across the ENTIRE scrollable canvas, so the base
+   colour is always seamless no matter how tall the page is. */
+html { background: var(--bg-0); }
 body {
   margin: 0;
+  min-height: 100%;
   font-family: var(--font);
-  background:
-    radial-gradient(1200px 600px at 90% -10%, var(--accent-soft), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(99,102,241,.10), transparent 60%),
-    var(--bg-0);
+  background: transparent;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+/* The accent gradients live on a fixed, full-viewport layer behind all content.
+   Because it's fixed (not scrolled with the body) it can never create a seam /
+   repeating line at the body's height boundary - the background stays a single
+   continuous surface on both desktop and mobile. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 90% -10%, var(--accent-soft), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(99,102,241,.10), transparent 60%);
+  background-repeat: no-repeat;
 }
 a { color: inherit; text-decoration: none; }
 input, select, textarea, button { font: inherit; color: inherit; }
@@ -432,9 +448,13 @@ html[data-theme="light"] select option {
   display: grid; grid-template-columns: minmax(0, 1.6fr) 380px; gap: 1.25rem;
   align-items: flex-start;
 }
-@media (max-width: 1024px) { .media-detail { grid-template-columns: 1fr; } }
+@media (max-width: 1024px) { .media-detail { grid-template-columns: minmax(0, 1fr); } }
 .back-link { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); margin-bottom: .75rem; grid-column: 1 / -1; }
 .back-link:hover { color: var(--accent); }
+/* min-width:0 lets these grid children shrink below their content width so a
+   wide slide / long unbreakable string can never push the layout past the
+   viewport edge (horizontal overflow on small screens). */
+.media-stage, .media-info { min-width: 0; max-width: 100%; }
 .media-stage { padding: 0; overflow: hidden; min-height: 360px; display: grid; place-items: center; background: #000; position: relative; }
 .media-stage[data-type="image"] { background: var(--surface-strong); }
 /* Documents (PDF / converted PPT) should fill the whole stage, not sit
@@ -472,23 +492,70 @@ html[data-theme="light"] select option {
 .ppt-stage { padding: 1.5rem; text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
 .ppt-stage img { max-width: 100%; max-height: 60vh; border-radius: 8px; box-shadow: var(--shadow-md); }
 
-/* In-browser PPTX viewer (client-side render when no server PDF exists) */
-.ppt-viewer-wrap { width: 100%; max-height: 82vh; overflow: auto; background: var(--surface-strong); padding: 1rem 1rem 2.5rem; }
-/* PPTXjs sets an explicit height/position on the host and its slides which can
-   clip the final slide. Force the host to grow with its content and let the
-   slides flow normally so every slide renders in full. */
-.pptx-host { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+/* In-browser PPTX viewer (client-side render when no server PDF exists).
+   Shows one slide at a time with Previous/Next navigation, each slide scaled
+   to fit the stage so a presentation never overflows on small screens. */
+.ppt-viewer-wrap { position: relative; width: 100%; height: 82vh; min-height: 480px; display: flex; flex-direction: column; background: var(--surface-strong); }
+
+/* Navigation toolbar: Previous / Next + slide counter + fullscreen. Laid out
+   as a 3-column grid so the nav group stays centered while the fullscreen
+   button sits at the far right. */
+.ppt-nav { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .4rem; padding: .5rem .6rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+.ppt-nav .ppt-center { grid-column: 2; display: flex; align-items: center; justify-content: center; gap: .5rem; min-width: 0; }
+.ppt-nav .ppt-fs { grid-column: 3; justify-self: end; }
+.ppt-nav button { display: inline-flex; align-items: center; gap: .35rem; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: .4rem .8rem; min-height: 34px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ppt-nav button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+.ppt-nav button:disabled { opacity: .4; cursor: default; }
+.ppt-nav .ppt-count { font-size: 13px; color: var(--text-muted); min-width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Stage that holds the single visible slide, centered and scroll-safe. The
+   `!important` height keeps PPTXjs from forcing a fixed host height. */
+.pptx-host { flex: 1 1 auto; display: grid; place-items: center; overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px; min-height: 0 !important; height: auto !important; }
+
+/* Restore PPTXjs's expected box model (the global `box-sizing: border-box` and
+   `img { max-width:100% }` rules otherwise shrink every text box and image,
+   making the authored text wrap, shift, and overlap). With content-box the
+   text lands exactly where PowerPoint placed it. */
+.pptx-host, .pptx-host * { box-sizing: content-box; }
+.pptx-host img { max-width: none; }
+
+/* Each slide is wrapped in a holder sized to the slide's scaled dimensions, so
+   the centered layout reserves exactly the right space (no overflow, no gap).
+   The slide itself is pinned at the holder's origin and scaled via transform
+   (uniform scaling = no distortion). */
+.ppt-slide-holder { position: relative; margin: auto; }
 .pptx-host .slide {
-    position: relative !important;
-    top: auto !important; left: auto !important;
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
     float: none !important;
-    display: block;
-    margin: 0 auto 1rem !important;
+    margin: 0 !important;
+    transform-origin: top left;
+    background: #fff;
     box-shadow: var(--shadow-md); border-radius: 4px;
 }
 .pptx-host .divs2slidesjs,
-.pptx-host > div:not(.slide) { height: auto !important; overflow: visible !important; }
-.ppt-status { display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 2rem; color: var(--text-muted); text-align: center; }
+.pptx-host > div:not(.slide):not(.ppt-slide-holder) { height: auto !important; overflow: visible !important; }
+
+/* Fullscreen mode: the wrapper fills the screen and the slide re-fits to the
+   larger stage (handled in JS on fullscreenchange). */
+.ppt-viewer-wrap:fullscreen,
+.ppt-viewer-wrap:-webkit-full-screen { width: 100vw; height: 100vh; max-height: none; }
+
+@media (max-width: 700px) {
+  .ppt-viewer-wrap { height: 84vh; min-height: 0; }
+  .pptx-host { padding: 8px 6px; }
+  .ppt-nav button { padding: .4rem .6rem; }
+  .ppt-nav .ppt-count { min-width: 60px; }
+}
+/* Below 420px the labelled buttons no longer fit next to the counter, so we
+   collapse them to just their arrow / icon to avoid horizontal overflow. */
+@media (max-width: 420px) {
+  .ppt-nav { gap: .25rem; padding: .45rem .35rem; }
+  .ppt-nav .ppt-label { display: none; }
+  .ppt-nav button { padding: .4rem .5rem; gap: 0; }
+  .ppt-nav .ppt-count { min-width: 52px; font-size: 12px; }
+}
+.ppt-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 2rem; color: var(--text-muted); text-align: center; }
 .ppt-status.ppt-status-error { color: var(--text); }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: gs-spin .8s linear infinite; }
 @keyframes gs-spin { to { transform: rotate(360deg); } }
@@ -519,13 +586,13 @@ html[data-theme="light"] select option {
 .gs-set-choice.active { color: #fff; font-weight: 700; }
 .gs-set-choice.active::after { content: '✓'; margin-left: auto; color: #a78bfa; }
 
-.media-info { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; }
-.media-info h1 { margin: 0; font-size: 1.4rem; line-height: 1.3; }
+.media-info { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.media-info h1 { margin: 0; font-size: 1.4rem; line-height: 1.3; overflow-wrap: anywhere; }
 .info-meta { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
-.badge { padding: .25rem .6rem; border-radius: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; }
+.badge { display: inline-block; max-width: 100%; padding: .25rem .6rem; border-radius: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; }
 .badge.soft { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .badge.tiny { padding: .15rem .45rem; font-size: 10.5px; margin: 1px; }
-.info-desc { color: var(--text-muted); font-size: 14px; line-height: 1.55; margin: 0; white-space: pre-wrap; }
+.info-desc { color: var(--text-muted); font-size: 14px; line-height: 1.55; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .info-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
 .media-info section { display: flex; flex-direction: column; gap: .4rem; }
 .media-info section h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-weight: 700; }
@@ -693,7 +760,7 @@ html[data-theme="light"] select option {
 .table th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); font-weight: 700; }
 .table tr:last-child td { border-bottom: 0; }
 .table code { background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-.table .meta { white-space: pre-wrap; word-break: break-word; max-width: 380px; font-size: 12px; color: var(--text-muted); margin: 0; }
+.table .meta { white-space: pre-wrap; max-width: 380px; font-size: 12px; color: var(--text-muted); margin: 0; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .dot.ok { background: var(--success); } .dot.off { background: #6b7280; }
 .perm-pills { display: flex; flex-wrap: wrap; gap: 2px; }
@@ -1497,7 +1564,6 @@ input[type="radio"]:not(.no-style) {
     .sidebar.open::before {
         content: '';
         position: fixed; inset: 0;
-        background: rgba(0,0,0,.5);
         z-index: -1;
     }
     .content { order: 1; }
@@ -1703,4 +1769,284 @@ html[data-theme="light"] .cat-card-section {
 @media (max-width: 480px) {
     .topbar { padding: .5rem .65rem; gap: .4rem; }
     .topbar-search { margin-top: .35rem; }
+}
+
+
+/* ---------- Favorites ("like") button ----------
+ * Appended so it inherits the existing theme variables. The active (favorited)
+ * state uses the accent colour to stay on-theme with the rest of the UI. */
+.fav-form { margin: 0; display: inline-flex; }
+
+/* Heart on a media card: a circular control overlaying the thumbnail. */
+.fav-btn--card {
+  position: absolute; top: .5rem; right: .5rem; z-index: 3;
+  width: 36px; height: 36px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; cursor: pointer;
+  background: rgba(10, 12, 20, .55); color: #fff;
+  border: 1px solid rgba(255, 255, 255, .18);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  transition: transform var(--speed), background var(--speed), color var(--speed), border-color var(--speed);
+}
+.fav-btn--card svg { width: 18px; height: 18px; }
+.fav-btn--card:hover { transform: scale(1.08); background: rgba(10, 12, 20, .72); }
+.fav-btn--card.is-fav { color: var(--accent); border-color: rgba(167, 139, 250, .55); }
+
+/* Heart on the media detail page: styled like the other ghost actions. */
+.fav-btn--detail { cursor: pointer; }
+.fav-btn--detail svg { transition: transform var(--speed); }
+.fav-btn.is-fav svg { fill: currentColor; }
+.fav-btn--detail.is-fav { color: var(--accent); border-color: rgba(167, 139, 250, .45); }
+.fav-btn:active svg { transform: scale(.85); }
+
+/* Favorites page wrapper (no sidebar; uses the full content width). */
+.favorites-page { width: 100%; }
+.favorites-page .content-header h2 { display: inline-flex; align-items: center; gap: .5rem; }
+
+
+/* =====================================================================
+   New features: share links, download requests, notifications, related
+   media, analytics. Appended so existing theme rules stay untouched; all
+   colours reuse the existing CSS custom properties.
+   ===================================================================== */
+
+/* ---------- Notification bell ---------- */
+.notif-menu { position: relative; }
+.notif-bell { position: relative; }
+.notif-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px;
+  padding: 0 4px; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+}
+.notif-popover { width: 340px; max-width: 92vw; padding: 0; overflow: hidden; }
+.notif-pop-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .7rem .9rem; border-bottom: 1px solid var(--border); }
+.notif-pop-list { max-height: 60vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+.notif-pop-item { display: block; padding: .65rem .9rem; border-bottom: 1px solid var(--border); color: var(--text); }
+.notif-pop-item:hover { background: var(--accent-soft); }
+.notif-pop-item.is-unread { background: rgba(167,139,250,.07); }
+.notif-pop-item .npi-title { display: block; font-weight: 600; font-size: 13.5px; }
+.notif-pop-item .npi-body { display: block; font-size: 12.5px; margin-top: 1px; }
+.notif-pop-item .npi-ago { display: block; font-size: 11px; margin-top: 3px; }
+.notif-empty { padding: 1.2rem .9rem; text-align: center; }
+.notif-pop-foot { display: block; text-align: center; padding: .6rem; font-size: 13px; font-weight: 600; color: var(--accent); border-top: 1px solid var(--border); }
+.notif-pop-foot:hover { background: var(--accent-soft); }
+
+/* ---------- Notifications page ---------- */
+.notifications-page { width: 100%; max-width: 820px; }
+.notif-list { list-style: none; margin: 0 0 1.25rem; padding: .25rem; border-radius: var(--radius); }
+.notif-item { display: flex; gap: .8rem; padding: .8rem .9rem; border-bottom: 1px solid var(--border); }
+.notif-item:last-child { border-bottom: 0; }
+.notif-item.is-unread { background: rgba(167,139,250,.06); border-radius: 10px; }
+.notif-ic { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.notif-main { min-width: 0; }
+.notif-title { font-weight: 600; color: var(--text); }
+a.notif-title:hover { color: var(--accent); }
+.notif-body { margin: .15rem 0 .2rem; color: var(--text-muted); font-size: 13.5px; }
+.follows-box { padding: 1.1rem 1.25rem; }
+
+/* ---------- Follow button (category chips) ---------- */
+.chip-follow { display: inline-flex; align-items: center; gap: .25rem; }
+.follow-btn {
+  display: inline-flex; align-items: center; gap: .3rem; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  border-radius: 999px; padding: .25rem .55rem; font-size: 12px; font-weight: 600;
+  transition: all var(--speed);
+}
+.follow-btn svg { width: 13px; height: 13px; }
+.follow-btn:hover { color: var(--accent); border-color: rgba(167,139,250,.4); background: var(--accent-soft); }
+.follow-btn.is-following { color: var(--accent); border-color: rgba(167,139,250,.5); background: var(--accent-soft); }
+.follow-btn.is-following svg { fill: currentColor; }
+
+/* ---------- Share box + download request (media detail actions) ---------- */
+.share-box, .dl-request { position: relative; }
+.share-box > summary, .dl-request > summary { list-style: none; }
+.share-box > summary::-webkit-details-marker, .dl-request > summary::-webkit-details-marker { display: none; }
+.share-form, .dl-request-form { display: flex; flex-direction: column; gap: .5rem; margin-top: .6rem; padding: .8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; }
+.share-form label, .dl-request-form label { display: flex; flex-direction: column; gap: .25rem; font-size: 12px; color: var(--text-muted); }
+.dl-request-form input[type="text"] { padding: .5rem .7rem; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+.share-result { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .6rem; padding: .7rem .8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; }
+.share-link-input { flex: 1 1 200px; min-width: 0; padding: .45rem .6rem; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 12.5px; }
+.share-expiry { flex-basis: 100%; margin: 0; font-size: 12px; }
+
+/* ---------- Related media ---------- */
+.related-media { margin-top: 2rem; }
+
+/* ---------- Public share page ---------- */
+.share-topbar { justify-content: flex-start; }
+.share-detail { grid-template-columns: minmax(0, 1.6fr) 360px; }
+@media (max-width: 1024px) { .share-detail { grid-template-columns: minmax(0, 1fr); } }
+.share-note { font-size: 12.5px; line-height: 1.5; }
+.share-message, .error-page { max-width: 620px; margin: 3rem auto; }
+
+/* ---------- Status badges (admin download requests) ---------- */
+.badge-ok    { background: rgba(52,211,153,.18); color: #34d399; }
+.badge-warn  { background: rgba(251,191,36,.18); color: #fbbf24; }
+.badge-danger{ background: rgba(248,113,113,.2);  color: #f87171; }
+.nav-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+
+/* ---------- Analytics charts (pure CSS, no external libs) ---------- */
+.bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding-top: .5rem; }
+.bar-col { flex: 1 1 0; display: flex; align-items: flex-end; height: 100%; }
+.bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-2)); opacity: .85; transition: opacity var(--speed); }
+.bar-col:hover .bar { opacity: 1; }
+.hbar-list { display: flex; flex-direction: column; gap: .6rem; margin-top: .4rem; }
+.hbar-row { display: grid; grid-template-columns: 120px 1fr auto; align-items: center; gap: .6rem; font-size: 13px; }
+.hbar-track { height: 10px; border-radius: 999px; background: var(--bg-2); overflow: hidden; }
+.hbar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.hbar-val { color: var(--text-muted); font-size: 12.5px; white-space: nowrap; }
+@media (max-width: 560px) { .hbar-row { grid-template-columns: 90px 1fr; } .hbar-val { grid-column: 2; text-align: right; } }
+
+
+/* =====================================================================
+   Round 3: notification popover responsiveness + readability, global
+   loading states, Home button, Favorites "Following" section.
+   Appended; reuses existing theme variables only.
+   ===================================================================== */
+
+/* ---- Notification popover: solid, readable glass (no bleed-through) ---- */
+.notif-popover {
+  background: var(--bg-2);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+}
+.notif-pop-head { background: var(--bg-2); }
+.notif-pop-foot { background: var(--bg-2); }
+
+/* Keep the popover fully inside the viewport on phones. */
+@media (max-width: 560px) {
+  .notif-popover {
+    position: fixed;
+    top: 62px; left: 8px; right: 8px;
+    width: auto; max-width: none;
+    max-height: calc(100vh - 78px);
+    display: flex; flex-direction: column;
+    z-index: 1200;
+  }
+  .notif-pop-list { max-height: none; flex: 1 1 auto; }
+}
+
+/* ---- Global top progress bar ---- */
+.global-progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  z-index: 4000; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 8px rgba(167,139,250,.6);
+}
+.global-progress.active {
+  width: 92%; opacity: 1;
+  transition: width 8s cubic-bezier(.1,.7,.3,1), opacity .2s ease;
+}
+.global-progress.done {
+  width: 100%; opacity: 1;
+  transition: width .2s ease, opacity .4s ease .15s;
+}
+
+/* ---- Button loading / busy spinner ---- */
+@keyframes gs-btn-spin { to { transform: rotate(360deg); } }
+button.is-loading, [data-busy="1"] { position: relative; pointer-events: none; opacity: .8; }
+button.is-loading::after, [data-busy="1"]::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 15px; height: 15px; margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255,255,255,.45); border-top-color: #fff;
+  border-radius: 50%; animation: gs-btn-spin .7s linear infinite;
+}
+/* Ghost / light buttons get an accent spinner so it's visible. */
+.btn-ghost.is-loading::after,
+.fav-btn[data-busy="1"]::after,
+.follow-btn[data-busy="1"]::after {
+  border-color: rgba(167,139,250,.3); border-top-color: var(--accent);
+}
+
+/* ---- Favorites page: Following + Favorites sections ---- */
+.fav-section { margin-bottom: 2.25rem; }
+.fav-section:last-child { margin-bottom: 0; }
+.empty-state.compact {
+  padding: 1.1rem 1.4rem; text-align: left;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.empty-state.compact p { margin: 0; }
+
+.follow-card-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .8rem;
+}
+.follow-card { display: flex; align-items: center; gap: .5rem; padding: .7rem .8rem; border-radius: var(--radius); }
+.follow-card-link { display: flex; align-items: center; gap: .65rem; min-width: 0; flex: 1 1 auto; color: var(--text); }
+.follow-card-link:hover .follow-card-name { color: var(--accent); }
+.follow-card-ic { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.follow-card-body { min-width: 0; display: flex; flex-direction: column; }
+.follow-card-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.follow-card-section { font-size: 12px; }
+
+/* ---- Notifications page blocks ---- */
+.notif-block { padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; }
+.notif-block h3 { margin: 0 0 .6rem; }
+.notif-block .notif-list { margin: 0; border-radius: 0; }
+.notif-block-empty { margin: .25rem 0; }
+.notif-cleanup-note { display: flex; align-items: center; gap: .4rem; margin: -.35rem 0 1rem; font-size: 12.5px; }
+
+
+/* =====================================================================
+   Round 4: modern file inputs (Edit Media), clearer mutually-exclusive
+   category messaging, and visible validation highlighting.
+   Appended; reuses existing theme variables only.
+   ===================================================================== */
+
+/* ---- Modern file picker (.file-field) ---- */
+.file-field { position: relative; margin-bottom: .75rem; }
+.file-field-input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+}
+.file-field-label {
+  display: flex; align-items: center; gap: .8rem; padding: .8rem .9rem;
+  border: 1.5px dashed var(--border); border-radius: 12px; background: var(--bg-2);
+  transition: border-color var(--speed), background var(--speed);
+}
+.file-field:hover .file-field-label { border-color: rgba(167,139,250,.5); background: var(--accent-soft); }
+.file-field.has-file .file-field-label { border-style: solid; border-color: rgba(167,139,250,.55); }
+.file-field-ic {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px;
+  display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
+}
+.file-field-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.file-field-title { font-weight: 600; font-size: 13.5px; }
+.file-field-title .req-tag {
+  font-style: normal; font-weight: 600; font-size: 10.5px; color: var(--danger);
+  background: rgba(248,113,113,.12); padding: 1px 7px; border-radius: 999px; margin-left: .4rem;
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.file-field-name { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-field.has-file .file-field-name { color: var(--accent); font-weight: 600; }
+.file-field-btn {
+  flex: 0 0 auto; padding: .42rem .85rem; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border); font-size: 12.5px; font-weight: 600;
+}
+.file-field:hover .file-field-btn { background: var(--bg-2); color: var(--accent); }
+
+/* ---- Mutually-exclusive category messaging ---- */
+/* Replace the generic dimmed banner with our specific per-card message. */
+.cat-card.dimmed { opacity: 1; }
+.cat-card.dimmed::before { content: none; display: none; }
+.cat-card.dimmed .cat-card-header,
+.cat-card.dimmed .cat-card-body { opacity: .5; }
+.cat-card-msg {
+  padding: .5rem .7rem; margin: .5rem .55rem 0;
+  font-size: 12px; font-weight: 600; line-height: 1.4;
+  color: var(--danger); background: rgba(248,113,113,.1);
+  border: 1px solid rgba(248,113,113,.3); border-radius: 8px;
+}
+
+/* ---- Visible validation highlight (any invalid field/zone) ---- */
+.field-invalid {
+  outline: 2px solid rgba(248,113,113,.75) !important;
+  outline-offset: 2px; border-radius: 10px;
+  animation: gs-shake .3s ease;
+}
+@keyframes gs-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
