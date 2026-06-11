@@ -9,6 +9,7 @@ use App\Core\Csrf;
 use App\Models\Media;
 use App\Models\Notification;
 use App\Models\ShareLink;
+use App\Models\User;
 
 /**
  * Generate (and revoke) expiring share links for a single media item.
@@ -43,6 +44,8 @@ final class ShareController
         $expiresHuman = date('d M Y, H:i', strtotime($link['expires_at']));
 
         ActivityLog::record('media.share', 'media', (int) $m['id'], ['expires_at' => $link['expires_at']]);
+
+        // Confirmation to the creator.
         Notification::create(
             (int) Auth::id(),
             'share',
@@ -50,6 +53,24 @@ final class ShareController
             'A link for "' . $m['title'] . '" was created. It expires ' . $expiresHuman . '.',
             url('/media/' . $m['uuid'])
         );
+
+        // Notify admins (super admins + user managers) that someone created a
+        // public share link, so they have oversight. Exclude the creator if
+        // they happen to be an admin (they already got the confirmation above).
+        $actorName = (string) (Auth::user()['name'] ?? ('User #' . Auth::id()));
+        $adminIds  = array_values(array_filter(
+            User::adminIds(),
+            fn ($id) => $id !== (int) Auth::id()
+        ));
+        if ($adminIds) {
+            Notification::createMany(
+                $adminIds,
+                'share',
+                'New share link created',
+                $actorName . ' created a public share link for "' . $m['title'] . '" (expires ' . $expiresHuman . ').',
+                url('/media/' . $m['uuid'])
+            );
+        }
 
         if ($this->wantsJson()) {
             $this->json([
