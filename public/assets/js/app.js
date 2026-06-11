@@ -136,7 +136,13 @@
     // Generic accordion cards [data-accordion]
     document.querySelectorAll('[data-accordion]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const body = btn.nextElementSibling;
+            // The panel is the next sibling, but skip any non-panel nodes that
+            // may sit between the header and its body (e.g. the mutual-exclusion
+            // message on Gimmick/Art cards) so the correct body still toggles.
+            let body = btn.nextElementSibling;
+            while (body && body.classList.contains('cat-card-msg')) {
+                body = body.nextElementSibling;
+            }
             if (!body) return;
             const isOpen = body.classList.contains('open');
             body.classList.toggle('open', !isOpen);
