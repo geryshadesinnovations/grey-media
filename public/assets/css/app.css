@@ -2050,3 +2050,72 @@ button.is-loading::after, [data-busy="1"]::after {
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
+
+
+/* =====================================================================
+   Round 5: Notifications page — professional redesign.
+   Appended; overrides the earlier notif-page rules and reuses theme vars.
+   ===================================================================== */
+.notifications-page { width: 100%; max-width: 860px; margin: 0 auto; }
+
+.notif-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: .5rem .25rem 1rem; flex-wrap: wrap; }
+.notif-head-text { min-width: 0; }
+.notif-head h2 { margin: 0; font-size: 1.5rem; letter-spacing: -.02em; display: inline-flex; align-items: center; gap: .6rem; }
+.notif-sub { margin: .3rem 0 0; font-size: 13px; }
+.notif-unread-pill { font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; letter-spacing: .01em; }
+.notif-head-action { margin: 0; }
+.notif-readall { display: inline-flex; align-items: center; gap: .4rem; }
+
+.notif-note {
+  display: flex; align-items: center; gap: .55rem;
+  margin: 0 .25rem 1.25rem; padding: .65rem .9rem;
+  font-size: 12.5px; color: var(--text-muted);
+  background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px;
+}
+.notif-note svg { flex: 0 0 auto; color: var(--accent); }
+
+/* Section blocks become flush cards with a header strip + count badge. */
+.notif-block { padding: 0; margin-bottom: 1.25rem; overflow: hidden; }
+.notif-block-head { display: flex; align-items: center; gap: .6rem; padding: .85rem 1.1rem; border-bottom: 1px solid var(--border); }
+.notif-block-head h3 { margin: 0; font-size: 1rem; }
+.notif-block-ic { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.notif-count-badge { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+
+.notif-list { list-style: none; margin: 0; padding: 0; border-radius: 0; }
+.notif-item {
+  display: flex; align-items: flex-start; gap: .85rem;
+  padding: .85rem 1.1rem; border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent; transition: background var(--speed);
+}
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:hover { background: var(--accent-soft); }
+.notif-item.is-unread { border-left-color: var(--accent); background: rgba(167,139,250,.05); }
+
+/* Type-coloured icon chips. */
+.notif-ic { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.notif-ic[data-type="share"]             { background: rgba(96,165,250,.14);  color: #60a5fa; }
+.notif-ic[data-type="download_approved"] { background: rgba(52,211,153,.16);  color: #34d399; }
+.notif-ic[data-type="download_rejected"] { background: rgba(248,113,113,.16); color: #f87171; }
+.notif-ic[data-type="download_request"]  { background: rgba(251,191,36,.16);  color: #fbbf24; }
+
+.notif-main { min-width: 0; flex: 1 1 auto; }
+.notif-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.notif-title { font-weight: 600; color: var(--text); line-height: 1.35; }
+a.notif-title:hover { color: var(--accent); text-decoration: underline; }
+.notif-time { flex: 0 0 auto; font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+.notif-body { margin: .2rem 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.45; }
+.notif-dot { flex: 0 0 auto; align-self: center; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.notif-empty { display: flex; flex-direction: column; align-items: center; gap: .55rem; padding: 2rem 1rem; text-align: center; color: var(--text-muted); }
+.notif-empty svg { color: var(--text-muted); opacity: .55; }
+.notif-empty p { margin: 0; font-size: 13px; max-width: 380px; line-height: 1.5; }
+
+.follows-box { padding: 0; }
+.follows-box .chip-row { padding: 1rem 1.1rem; }
+
+@media (max-width: 560px) {
+  .notif-head h2 { font-size: 1.3rem; }
+  .notif-row-top { flex-direction: column; gap: .1rem; }
+  .notif-time { order: 2; }
+  .notif-item { padding: .8rem .9rem; }
+}
