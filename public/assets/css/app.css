@@ -2119,3 +2119,41 @@ a.notif-title:hover { color: var(--accent); text-decoration: underline; }
   .notif-time { order: 2; }
   .notif-item { padding: .8rem .9rem; }
 }
+
+
+/* =====================================================================
+   Round 6: Attractive error pages (404 / 403 / link-expired).
+   Appended; reuses existing theme variables only.
+   ===================================================================== */
+.error-page { display: grid; place-items: center; min-height: 62vh; padding: 1.5rem 1rem; }
+.error-stage {
+  text-align: center; max-width: 460px; margin: 0 auto; padding: 2.6rem 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: .35rem; border-radius: 20px;
+}
+.error-icon {
+  position: relative; width: 80px; height: 80px; border-radius: 24px; margin-bottom: .6rem;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 14px 38px rgba(124,92,255,.35);
+}
+.error-icon svg { width: 38px; height: 38px; }
+.error-icon::after {
+  content: ''; position: absolute; inset: -8px; border-radius: 30px;
+  background: inherit; filter: blur(24px); opacity: .4; z-index: -1;
+}
+.error-icon--danger { background: linear-gradient(135deg, #f87171, #fb7185); box-shadow: 0 14px 38px rgba(248,113,113,.32); }
+.error-icon--warn   { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 14px 38px rgba(251,191,36,.30); }
+.error-code {
+  font-size: 3.4rem; font-weight: 800; line-height: 1; letter-spacing: -.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.error-title { margin: .25rem 0 .1rem; font-size: 1.4rem; }
+.error-msg { margin: 0; color: var(--text-muted); font-size: 14.5px; line-height: 1.55; max-width: 40ch; }
+.error-actions { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; margin-top: 1rem; }
+.error-actions .btn-primary, .error-actions .btn-ghost { display: inline-flex; align-items: center; gap: .4rem; }
+@media (max-width: 480px) {
+  .error-stage { padding: 2rem 1.25rem; }
+  .error-code { font-size: 2.8rem; }
+  .error-title { font-size: 1.25rem; }
+}
