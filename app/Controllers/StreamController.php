@@ -194,10 +194,10 @@ final class StreamController
 
     private function isDownloadable(array $m): bool
     {
-        // The media's own "Allow downloads" flag governs for everyone (admins
-        // included), so disabling it truly disables direct download. Files that
-        // aren't flagged are reachable only via an explicit (legacy) grant or
-        // the approved single-use download-request token route.
+        // Users with the download permission (and super admins) can always
+        // download directly. Otherwise, the item must be flagged "Allow
+        // downloads" (or the user must hold a legacy explicit grant).
+        if (Auth::canDownload()) return true;
         if (!empty($m['is_downloadable'])) {
             if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
             return true;

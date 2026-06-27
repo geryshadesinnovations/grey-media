@@ -105,15 +105,17 @@ final class DownloadRequestController
 
     private function canAlreadyDownload(array $m): bool
     {
-        if (empty($m['is_downloadable'])) {
-            // Not flagged downloadable - only a legacy explicit grant counts.
-            return (bool) Database::scalar(
-                "SELECT 1 FROM media_download_grants
-                 WHERE media_id = ? AND user_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
-                [$m['id'], Auth::id()]
-            );
+        // Permission holders (and super admins) never need to request.
+        if (Auth::canDownload()) return true;
+        if (!empty($m['is_downloadable'])) {
+            if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
+            return true;
         }
-        if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
-        return true;
+        // Legacy explicit grant.
+        return (bool) Database::scalar(
+            "SELECT 1 FROM media_download_grants
+             WHERE media_id = ? AND user_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
+            [$m['id'], Auth::id()]
+        );
     }
 }

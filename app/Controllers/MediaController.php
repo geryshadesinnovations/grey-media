@@ -172,14 +172,17 @@ final class MediaController
      */
     private function isDownloadable(array $m): bool
     {
-        // The media's own "Allow downloads" flag is the single source of truth
-        // for EVERY user (including admins), so the button is always WYSIWYG:
-        // flag on -> direct Download; flag off -> Request Download workflow.
-        if (empty($m['is_downloadable'])) return false;
-        if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) {
-            return false;
+        // Users WITH the download permission (and super admins) can always
+        // download directly - they are never sent through the request flow.
+        if (Auth::canDownload()) return true;
+        // In addition, any item explicitly flagged "Allow downloads" is open to
+        // everyone who can view it (until any download window lapses).
+        if (!empty($m['is_downloadable'])) {
+            if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) return false;
+            return true;
         }
-        return true;
+        // Everyone else uses the Request Download workflow.
+        return false;
     }
 
     private function allTrees(): array
