@@ -2182,7 +2182,7 @@ a.notif-title:hover { color: var(--accent); text-decoration: underline; }
 }
 .combo.open .combo-caret { transform: translateY(-50%) rotate(180deg); }
 .combo-panel {
-  position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; right: 0;
+  position: fixed; z-index: 4000;
   background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: var(--shadow-lg); overflow: hidden;
 }

@@ -601,7 +601,25 @@
         list.className = 'combo-list';
         panel.appendChild(list);
 
-        wrap.append(input, caret, panel);
+        // Portal the panel to <body> and position it as fixed, so it can never
+        // be clipped by an ancestor's overflow:hidden/auto or trapped beneath
+        // another stacking context (e.g. the Category selection cards).
+        wrap.append(input, caret);
+        document.body.appendChild(panel);
+
+        const positionPanel = () => {
+            const r = input.getBoundingClientRect();
+            panel.style.width = r.width + 'px';
+            panel.style.left = Math.round(r.left) + 'px';
+            const ph = Math.min(panel.scrollHeight, 280);
+            const spaceBelow = window.innerHeight - r.bottom;
+            // Flip above the field if there isn't room below.
+            if (spaceBelow < ph + 8 && r.top > spaceBelow) {
+                panel.style.top = Math.round(r.top - ph - 4) + 'px';
+            } else {
+                panel.style.top = Math.round(r.bottom + 4) + 'px';
+            }
+        };
 
         const opts = () => [...select.options].map(o => ({ value: o.value, label: o.text }));
         let activeIdx = -1;
@@ -634,7 +652,7 @@
             });
         };
 
-        const open = () => { render(''); panel.hidden = false; wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true'); };
+        const open = () => { render(''); panel.hidden = false; wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true'); positionPanel(); };
         const close = () => { panel.hidden = true; wrap.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); syncInput(); };
         const choose = (val) => {
             if (select.value !== val) {
@@ -646,7 +664,7 @@
         };
 
         input.addEventListener('focus', () => { input.value = ''; open(); });
-        input.addEventListener('input', () => { panel.hidden = false; wrap.classList.add('open'); render(input.value); });
+        input.addEventListener('input', () => { panel.hidden = false; wrap.classList.add('open'); render(input.value); positionPanel(); });
         caret.addEventListener('mousedown', (e) => {
             e.preventDefault();
             if (panel.hidden) input.focus();
@@ -669,7 +687,10 @@
             items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
             items[activeIdx]?.scrollIntoView({ block: 'nearest' });
         });
-        document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+        document.addEventListener('click', (e) => { if (!wrap.contains(e.target) && !panel.contains(e.target)) close(); });
+        // Keep the portalled panel glued to the field while open.
+        window.addEventListener('scroll', () => { if (!panel.hidden) positionPanel(); }, true);
+        window.addEventListener('resize', () => { if (!panel.hidden) positionPanel(); });
     };
 
     document.querySelectorAll('select[data-search]').forEach(initCombo);
