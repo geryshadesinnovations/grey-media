@@ -173,7 +173,7 @@ foreach ($sections as $s) {
                     <label><span>Keywords</span><input form="upload-form" type="text" name="keywords" placeholder="Separate with commas"></label>
 
                     <label><span>Company</span>
-                    <select form="upload-form" name="company_id">
+                    <select form="upload-form" name="company_id" data-search data-placeholder="Search company…">
                         <option value="">— None —</option>
                         <?php foreach ($companies as $co): ?>
                         <option value="<?= (int)$co['id'] ?>"><?= e($co['name']) ?></option>

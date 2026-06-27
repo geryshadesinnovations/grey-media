@@ -172,7 +172,9 @@ final class MediaController
      */
     private function isDownloadable(array $m): bool
     {
-        if (Auth::isSuperAdmin()) return true;
+        // The media's own "Allow downloads" flag is the single source of truth
+        // for EVERY user (including admins), so the button is always WYSIWYG:
+        // flag on -> direct Download; flag off -> Request Download workflow.
         if (empty($m['is_downloadable'])) return false;
         if (!empty($m['download_expiry']) && strtotime((string) $m['download_expiry']) < time()) {
             return false;

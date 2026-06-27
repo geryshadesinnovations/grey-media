@@ -556,3 +556,121 @@
         }, true);
     })();
 })();
+
+
+
+/* =====================================================================
+ * Searchable <select> (progressive enhancement)
+ * Any <select data-search> becomes a type-to-filter combo box. The native
+ * <select> stays in the DOM (visually hidden) so form submission and the
+ * existing onchange="this.form.submit()" behaviour keep working unchanged.
+ * Shows all options by default; filters live as the user types.
+ * ===================================================================== */
+(() => {
+    'use strict';
+
+    const initCombo = (select) => {
+        if (select.dataset.comboReady) return;
+        select.dataset.comboReady = '1';
+
+        const placeholder = select.dataset.placeholder || 'Search…';
+        const wrap = document.createElement('div');
+        wrap.className = 'combo';
+        select.parentNode.insertBefore(wrap, select);
+        wrap.appendChild(select);
+        select.classList.add('combo-native');
+        select.setAttribute('tabindex', '-1');
+        select.setAttribute('aria-hidden', 'true');
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'combo-input';
+        input.placeholder = placeholder;
+        input.autocomplete = 'off';
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-expanded', 'false');
+
+        const caret = document.createElement('span');
+        caret.className = 'combo-caret';
+        caret.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
+
+        const panel = document.createElement('div');
+        panel.className = 'combo-panel';
+        panel.hidden = true;
+        const list = document.createElement('ul');
+        list.className = 'combo-list';
+        panel.appendChild(list);
+
+        wrap.append(input, caret, panel);
+
+        const opts = () => [...select.options].map(o => ({ value: o.value, label: o.text }));
+        let activeIdx = -1;
+
+        const syncInput = () => {
+            const sel = select.options[select.selectedIndex];
+            input.value = (sel && sel.value !== '') ? sel.text : '';
+        };
+        syncInput();
+
+        const render = (filter) => {
+            const f = (filter || '').trim().toLowerCase();
+            list.innerHTML = '';
+            activeIdx = -1;
+            const matches = opts().filter(o => !f || o.label.toLowerCase().includes(f));
+            if (!matches.length) {
+                const li = document.createElement('li');
+                li.className = 'combo-empty';
+                li.textContent = 'No matches';
+                list.appendChild(li);
+                return;
+            }
+            matches.forEach((o) => {
+                const li = document.createElement('li');
+                li.className = 'combo-opt' + (o.value === select.value ? ' selected' : '');
+                li.textContent = o.label || '—';
+                li.dataset.value = o.value;
+                li.addEventListener('mousedown', (e) => { e.preventDefault(); choose(o.value); });
+                list.appendChild(li);
+            });
+        };
+
+        const open = () => { render(''); panel.hidden = false; wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true'); };
+        const close = () => { panel.hidden = true; wrap.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); syncInput(); };
+        const choose = (val) => {
+            if (select.value !== val) {
+                select.value = val;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            syncInput();
+            close();
+        };
+
+        input.addEventListener('focus', () => { input.value = ''; open(); });
+        input.addEventListener('input', () => { panel.hidden = false; wrap.classList.add('open'); render(input.value); });
+        caret.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (panel.hidden) input.focus();
+            else close();
+        });
+        input.addEventListener('keydown', (e) => {
+            const items = [...list.querySelectorAll('.combo-opt')];
+            if (e.key === 'ArrowDown') {
+                e.preventDefault(); activeIdx = Math.min(items.length - 1, activeIdx + 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault(); activeIdx = Math.max(0, activeIdx - 1);
+            } else if (e.key === 'Enter') {
+                if (!panel.hidden && items[activeIdx]) { e.preventDefault(); choose(items[activeIdx].dataset.value); }
+                return;
+            } else if (e.key === 'Escape') {
+                close(); return;
+            } else {
+                return;
+            }
+            items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+            items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+        });
+        document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+    };
+
+    document.querySelectorAll('select[data-search]').forEach(initCombo);
+})();

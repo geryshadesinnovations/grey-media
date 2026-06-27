@@ -215,16 +215,15 @@ final class UploadController
         ]);
 
         // Notify every user who has access to this media's section(s) - one
-        // notification per upload - regardless of whether they follow a
-        // category. Section access mirrors Auth (super admins + the per-user
-        // can_graphics / can_events flags). The uploader is excluded.
+        // notification per upload - so newly uploaded items show up in the
+        // "Uploads" feed for everyone who can see that section (the uploader
+        // included, so they can confirm their own upload landed). Section
+        // access mirrors Auth (super admins + the per-user can_graphics /
+        // can_events flags).
         $sectionCodes = array_values(array_unique(
             array_map(fn ($r) => (string) $r['section_code'], $allowedRows)
         ));
-        $recipientIds = array_values(array_filter(
-            User::idsWithSectionAccess($sectionCodes),
-            fn ($uid) => $uid !== (int) Auth::id()
-        ));
+        $recipientIds = User::idsWithSectionAccess($sectionCodes);
         if ($recipientIds) {
             $label = implode(' & ', array_map('ucfirst', $sectionCodes));
             Notification::createMany(

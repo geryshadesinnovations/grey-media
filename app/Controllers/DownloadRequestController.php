@@ -105,7 +105,6 @@ final class DownloadRequestController
 
     private function canAlreadyDownload(array $m): bool
     {
-        if (Auth::isSuperAdmin()) return true;
         if (empty($m['is_downloadable'])) {
             // Not flagged downloadable - only a legacy explicit grant counts.
             return (bool) Database::scalar(

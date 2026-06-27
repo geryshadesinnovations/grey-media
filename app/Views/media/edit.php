@@ -151,7 +151,7 @@ foreach ($sections as $s) {
                         <label><span>Description</span><textarea name="description" rows="3"><?= e($media['description']) ?></textarea></label>
                         <label><span>Keywords</span><input type="text" name="keywords" value="<?= e($media['keywords']) ?>" placeholder="Separate with commas"></label>
                         <label><span>Company</span>
-                        <select name="company_id">
+                        <select name="company_id" data-search data-placeholder="Search company…">
                             <option value="">— None —</option>
                             <?php foreach ($companies as $co): ?>
                             <option value="<?= (int)$co['id'] ?>" <?= ((int)($media['company_id'] ?? 0)) === (int)$co['id'] ? 'selected' : '' ?>><?= e($co['name']) ?></option>
