@@ -45,7 +45,7 @@ $this->extend('layouts/app');
                     <tbody>
                     <?php foreach ($live as $s): ?>
                         <tr>
-                            <td><?= e($s['name']) ?><br><small class="muted"><?= e($s['email']) ?></small></td>
+                            <td><?= e($s['name']) ?><br><small class="muted"><?= e($s['username']) ?></small></td>
                             <td><?= e($s['ip_address']) ?></td>
                             <td><?php if ($s['media_uuid']): ?><a href="<?= url('/media/' . $s['media_uuid']) ?>"><?= e($s['media_title']) ?></a><?php else: ?><span class="muted">Browsing</span><?php endif; ?></td>
                             <td><?= e($s['last_activity_at']) ?></td>

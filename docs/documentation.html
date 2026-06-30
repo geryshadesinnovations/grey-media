@@ -236,13 +236,19 @@
       <h3>Main features</h3>
       <div class="tablewrap"><table>
         <tr><th>Feature</th><th>What it means for a normal user</th></tr>
-        <tr><td>Secure login</td><td>Only invited staff with an email + password can enter. Too many wrong tries are blocked.</td></tr>
+        <tr><td>Secure login</td><td>Only invited staff with a username + password can enter. Too many wrong tries are blocked.</td></tr>
         <tr><td>Dashboard &amp; search</td><td>A Pinterest-style grid of media with filters (section, category, type, company) and a smart search box.</td></tr>
         <tr><td>Categories &amp; occasions</td><td>Files are filed under nested categories (e.g. <i>Art → Videos → Invitation Videos</i>) and tagged with occasions (e.g. <i>Diwali</i>).</td></tr>
         <tr><td>Upload</td><td>Drag-and-drop upload with a progress bar; the same file is never stored twice.</td></tr>
         <tr><td>Viewers</td><td>Built-in players for video (with quality selector), PDF, PowerPoint and images.</td></tr>
-        <tr><td>Watermark &amp; protection</td><td>A moving label with the viewer's name/email is painted over media; right-click and dev-tools shortcuts are discouraged.</td></tr>
-        <tr><td>Admin panel</td><td>Manage users, categories, companies, view activity logs and see who is online right now.</td></tr>
+        <tr><td>Favorites</td><td>Each user can "like" any video, image, PDF or PPT; their personal Favorites page lists them and the categories they follow.</td></tr>
+        <tr><td>Follow categories &amp; notifications</td><td>An in-app bell notifies users about new uploads in sections they can access, share-link events and download approvals. Viewed notifications auto-clear after 24 hours.</td></tr>
+        <tr><td>Expiring share links</td><td>Generate a secure, password-free public link to a single item that stops working after a chosen time.</td></tr>
+        <tr><td>Download requests</td><td>When direct download is off, a user can request access; an admin approves it, granting a one-time download link.</td></tr>
+        <tr><td>Replace media file</td><td>In Edit Media, swap the underlying file (video→video, etc.) while keeping all metadata, favorites, views and shares; replacements run the full processing pipeline (incl. video quality renditions).</td></tr>
+        <tr><td>Related media &amp; analytics</td><td>Detail pages suggest related items; admins get an analytics dashboard (views/downloads/uploads trends, storage, top content) with CSV export.</td></tr>
+        <tr><td>Watermark &amp; protection</td><td>A moving label with the viewer's name is painted over media; right-click and dev-tools shortcuts are discouraged.</td></tr>
+        <tr><td>Admin panel</td><td>Manage users, categories, companies, review download requests, view activity logs and see who is online right now.</td></tr>
       </table></div>
 
       <h3>User types (roles)</h3>
@@ -435,12 +441,8 @@
 │   └── config.php            ← reads .env and exposes settings to the app
 │
 ├── database/
-│   ├── schema.sql            ← creates all tables (run once)
-│   ├── seed.sql              ← fills starter data (roles, admin, categories)
-│   └── migrations/           ← later database changes
-│       ├── 2026_05_20_hybrid_subcategories.sql
-│       ├── 2026_05_20_backfill_media_category_ancestors.sql
-│       └── 2026_05_22_companies.sql
+│   ├── schema.sql            ← creates ALL tables (run once) — migrations merged in
+│   └── seed.sql              ← fills starter data (roles, admin, full category trees)
 │
 ├── public/                   ← THE ONLY PUBLIC FOLDER (the website root)
 │   ├── index.php             ← the single "front door" every request enters
@@ -678,6 +680,16 @@
         </div>
       </details>
 
+      <details class="box filecard"><summary>app/Core/FileResponse.php <span class="tag">range-aware file streaming</span></summary>
+        <div class="body">
+          <div class="kv">
+            <div>Purpose</div><div>Streams a file to the browser with HTTP Range support (so video can seek), either inline or as a download attachment. Shared by the public share-link routes and the approved single-use download route so neither reimplements byte-range streaming.</div>
+            <div>Functions</div><div><code>inline()</code> · <code>download()</code>.</div>
+          </div>
+          <p><b>When to edit:</b> To change streaming headers/behaviour for share/approved-download routes.</p>
+        </div>
+      </details>
+
       <h4>Middleware — the “security gates” (<code>app/Core/Middleware/</code>)</h4>
       <details class="box filecard"><summary>RequireAuth.php · RequireAdmin.php · VerifyCsrf.php <span class="tag">gates</span></summary>
         <div class="body">
@@ -711,11 +723,53 @@
         </div>
       </details>
 
-      <details class="box filecard"><summary>MediaController.php <span class="tag">view/edit/delete one item</span></summary>
+      <details class="box filecard"><summary>MediaController.php <span class="tag">view/edit/delete/replace one item</span></summary>
         <div class="body">
-          <div class="kv"><div>Methods</div><div><code>show()</code> the viewer page (logs the view, issues a stream token) · <code>edit()</code>/<code>update()</code> metadata + categories · <code>destroy()</code> delete (removes files too) · <code>isDownloadable()</code> permission check.</div>
-          <div>Tables used</div><div><code>media</code>, <code>media_categories</code>, <code>view_logs</code>, <code>user_sessions</code>, <code>media_download_grants</code></div></div>
-          <p><b>When to edit:</b> Change what the viewer page shows, or edit/delete behaviour.</p>
+          <div class="kv"><div>Methods</div><div><code>show()</code> the viewer page (logs the view, issues a stream token, also loads favorite state, related media, follow state and any approved download token) · <code>edit()</code>/<code>update()</code> metadata + categories <b>and optional file replacement</b> · <code>destroy()</code> delete (removes files too) · <code>isDownloadable()</code> permission check · private <code>handleFileReplacement()</code>, <code>detectMime()</code>, <code>extFor()</code>.</div>
+          <div>Tables used</div><div><code>media</code>, <code>media_categories</code>, <code>view_logs</code>, <code>user_sessions</code>, <code>favorites</code>, <code>download_requests</code>, <code>category_follows</code></div></div>
+          <p><b>Replace file:</b> When an edit submit includes a new file, the controller validates it is the <em>same media type</em>, requires a thumbnail for video/PPT/PDF, regenerates all derivatives through <code>MediaProcessor::deriveAll()</code> (same pipeline as upload, including HLS), then swaps the columns while keeping the same row id/uuid — so favorites, shares, views and categories survive.</p>
+          <p><b>When to edit:</b> Change what the viewer page shows, edit/delete behaviour, or the file-replacement rules.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>FavoritesController.php <span class="tag">per-user "likes"</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>index()</code> the Favorites page (Following categories + Favorited media) · <code>toggle($uuid)</code> add/remove a favorite (CSRF-checked, section-permission-gated, JSON for AJAX with a form fallback).</div>
+          <div>Tables used</div><div><code>favorites</code>, <code>media</code>, <code>category_follows</code></div></div>
+          <p><b>When to edit:</b> Change favorites behaviour or the Favorites page layout.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>FollowController.php <span class="tag">follow categories</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>toggle($id)</code> follow/unfollow a category so the user is notified of new uploads in it (section-permission-gated, JSON).</div>
+          <div>Tables used</div><div><code>category_follows</code>, <code>categories</code>, <code>sections</code></div></div>
+          <p><b>When to edit:</b> Change follow rules or which sections can be followed.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>ShareController.php &amp; SharePublicController.php <span class="tag">expiring share links</span></summary>
+        <div class="body">
+          <div class="kv"><div>ShareController</div><div><code>create($uuid)</code> mint a secure, time-limited public link (presets 1h…30d), notify the creator + admins · <code>revoke($id)</code>.</div>
+          <div>SharePublicController</div><div><b>No login required.</b> <code>show($token)</code> standalone viewer page · <code>stream/thumb/preview($token)</code> serve the file (range-enabled via <code>Core/FileResponse</code>). Every route re-checks the token isn't expired/revoked; a token unlocks exactly one item.</div>
+          <div>Tables used</div><div><code>share_links</code>, <code>media</code>, <code>notifications</code></div></div>
+          <p><b>When to edit:</b> Change link durations, what the public page shows, or share notifications.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>DownloadRequestController.php <span class="tag">request → approval workflow</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>store($uuid)</code> submit a request when direct download is off (notifies admins) · <code>downloadApproved($token)</code> single-use download via an approved token bound to the requesting user. Admin approve/reject lives in <code>AdminController</code>.</div>
+          <div>Tables used</div><div><code>download_requests</code>, <code>media</code>, <code>download_logs</code>, <code>notifications</code>, <code>media_download_grants</code></div></div>
+          <p><b>When to edit:</b> Change the request flow, token lifetime, or single-use rules.</p>
+        </div>
+      </details>
+
+      <details class="box filecard"><summary>NotificationController.php <span class="tag">in-app bell</span></summary>
+        <div class="body">
+          <div class="kv"><div>Methods</div><div><code>index()</code> the notifications page (Uploads / Activity / Following) · <code>feed()</code> JSON for the bell dropdown (count + recent) · <code>readAll()</code> · <code>read($id)</code>. Read paths also lazily purge notifications viewed &gt;24h ago.</div>
+          <div>Tables used</div><div><code>notifications</code>, <code>category_follows</code></div></div>
+          <p><b>When to edit:</b> Change notification grouping, the feed, or the 24h auto-cleanup window.</p>
         </div>
       </details>
 
@@ -744,9 +798,9 @@
 
       <details class="box filecard"><summary>AdminController.php <span class="tag">admin panel</span></summary>
         <div class="body">
-          <div class="kv"><div>Methods</div><div><code>dashboard()</code> stats + live sessions · <code>users()/userStore()/userUpdate()/userDelete()</code> · <code>categories()/categoryStore()/categoryDelete()</code> · <code>companies()/companyStore()/companyDelete()</code> · <code>activity()</code> last 200 events.</div>
-          <div>Tables used</div><div><code>users</code>, <code>roles</code>, <code>categories</code>, <code>companies</code>, <code>activity_logs</code>, <code>user_sessions</code>, <code>media</code>, <code>download_logs</code>, <code>view_logs</code></div></div>
-          <p><b>When to edit:</b> Add admin screens or change management actions.</p>
+          <div class="kv"><div>Methods</div><div><code>dashboard()</code> stats + live sessions · <code>users()/userStore()/userUpdate()/userDelete()</code> · <code>categories()/categoryStore()/categoryDelete()</code> · <code>companies()/companyStore()/companyDelete()</code> · <code>activity()</code> last 200 events · <code>downloadRequests()/downloadRequestApprove()/downloadRequestReject()</code> review queue · <code>analytics()</code> trends/storage/top content + <code>analyticsExport()</code> CSV.</div>
+          <div>Tables used</div><div><code>users</code>, <code>roles</code>, <code>categories</code>, <code>companies</code>, <code>activity_logs</code>, <code>user_sessions</code>, <code>media</code>, <code>download_logs</code>, <code>view_logs</code>, <code>download_requests</code>, <code>notifications</code></div></div>
+          <p><b>When to edit:</b> Add admin screens, change management actions, or adjust analytics/CSV exports.</p>
         </div>
       </details>
 
@@ -754,13 +808,19 @@
       <p>Each Model is the “expert” for one part of the database.</p>
       <div class="tablewrap"><table>
         <tr><th>File</th><th>Responsible for</th><th>Notable functions</th></tr>
-        <tr><td><code>User.php</code></td><td>users + roles</td><td><code>all, find, roles, create, update, delete</code> (delete = deactivate)</td></tr>
-        <tr><td><code>Media.php</code></td><td>the media library (the biggest model)</td><td><code>create, findByUuid, search, suggest, attachCategories, sectionCodesFor, statsOverview, bumpView/Download</code></td></tr>
+        <tr><td><code>User.php</code></td><td>users + roles</td><td><code>all, find, roles, create, update, delete</code> (delete = deactivate) · <code>isValidUsername, usernameExists, adminIds, idsWithSectionAccess</code></td></tr>
+        <tr><td><code>Media.php</code></td><td>the media library (the biggest model)</td><td><code>create, findByUuid, search, suggest, attachCategories, sectionCodesFor, statsOverview, bumpView/Download, related, updateFile</code></td></tr>
         <tr><td><code>Category.php</code></td><td>nested categories</td><td><code>bySection, tree, descendantIds, ancestorIds, create, delete</code></td></tr>
         <tr><td><code>Company.php</code></td><td>companies</td><td><code>all, find, create, update, delete</code></td></tr>
         <tr><td><code>Occasion.php</code></td><td>themes (Diwali, World Heart Day…)</td><td><code>groupedAll, all, find</code></td></tr>
         <tr><td><code>Section.php</code></td><td>Graphics / Events</td><td><code>all, findByCode, find</code></td></tr>
         <tr><td><code>Tag.php</code></td><td>free-form tags</td><td><code>findOrCreateMany, popular</code></td></tr>
+        <tr><td><code>Favorite.php</code></td><td>per-user "likes"</td><td><code>isFavorite, toggle, idsForUser, countForUser</code></td></tr>
+        <tr><td><code>CategoryFollow.php</code></td><td>followed categories</td><td><code>isFollowing, toggle, followedIds, followedList, followerUserIds</code></td></tr>
+        <tr><td><code>ShareLink.php</code></td><td>expiring public links</td><td><code>create, resolveValid, touch, activeForUser, revoke, purgeExpired</code></td></tr>
+        <tr><td><code>DownloadRequest.php</code></td><td>download request workflow</td><td><code>latestFor, hasPending, create, approve, reject, resolveUsableToken, consume, usableFor, pendingCount, listForAdmin</code></td></tr>
+        <tr><td><code>Notification.php</code></td><td>in-app bell notifications</td><td><code>create, createMany, unreadCount, recent, ofType, excludingType, markRead, markAllRead, purgeExpired</code></td></tr>
+        <tr><td><code>Analytics.php</code></td><td>admin analytics (read-only)</td><td><code>storageByType, dailySeries, activeUsers, actionBreakdown, activityForExport, downloadsForExport</code></td></tr>
       </table></div>
       <p><b>When to edit a Model:</b> When you need a new database question answered (e.g., “list media uploaded last week”). Add a function here rather than writing SQL inside a controller.</p>
       <div class="cal danger"><div class="t">🔴 Deleting a Model</div>Deleting any Model breaks every controller/view that uses it. For example, deleting <code>Media.php</code> breaks the dashboard, viewer, upload, search and admin stats.</div>
@@ -778,48 +838,53 @@
       <p>Views are HTML files with little bits of PHP. Files starting with an underscore (e.g. <code>_sidebar.php</code>) are “partials” — reusable pieces included by other views.</p>
       <div class="tablewrap"><table>
         <tr><th>File</th><th>What it renders</th><th>Edit it when…</th></tr>
-        <tr><td><code>layouts/app.php</code></td><td>The main page frame: top bar, search, user menu, theme toggle, where page content + scripts go.</td><td>changing global header/footer/scripts.</td></tr>
+        <tr><td><code>layouts/app.php</code></td><td>The main page frame: top bar, Home button, search, notification bell, favorites link, user menu, theme toggle, the global loading bar, and where page content + scripts go.</td><td>changing global header/footer/scripts.</td></tr>
         <tr><td><code>layouts/auth.php</code></td><td>The slim frame for the login page.</td><td>restyling the login screen frame.</td></tr>
-        <tr><td><code>auth/login.php</code></td><td>The login form.</td><td>changing login fields/copy.</td></tr>
+        <tr><td><code>layouts/share.php</code></td><td>The minimal, login-free frame for public share-link pages.</td><td>restyling the public share viewer.</td></tr>
+        <tr><td><code>auth/login.php</code></td><td>The login form (username + password).</td><td>changing login fields/copy.</td></tr>
         <tr><td><code>dashboard/index.php</code></td><td>The filter bar + media grid + pagination + the “Categories” mobile button.</td><td>changing the main browsing page.</td></tr>
         <tr><td><code>dashboard/_sidebar.php</code></td><td>The category tree drawer (also the mobile hamburger drawer).</td><td>changing category navigation.</td></tr>
-        <tr><td><code>dashboard/_card.php</code></td><td>One media “card” in the grid (thumbnail + title + hover preview).</td><td>changing how cards look.</td></tr>
-        <tr><td><code>media/show.php</code></td><td>The single-item viewer: video player / PDF iframe / PPT viewer / image, plus details and watermark.</td><td>changing the viewer.</td></tr>
-        <tr><td><code>media/edit.php</code></td><td>The edit form (title, description, categories, settings).</td><td>changing editable fields.</td></tr>
+        <tr><td><code>dashboard/_card.php</code></td><td>One media “card” in the grid (thumbnail + title + hover preview + favorite heart).</td><td>changing how cards look.</td></tr>
+        <tr><td><code>media/show.php</code></td><td>The single-item viewer (video/PDF/PPT/image) plus details, favorite, share, download/request actions, follow toggles and a Related media strip.</td><td>changing the viewer.</td></tr>
+        <tr><td><code>media/edit.php</code></td><td>The edit form (title, description, categories, settings) and the modern “Replace file” pickers.</td><td>changing editable fields or replacement UI.</td></tr>
         <tr><td><code>upload/form.php</code></td><td>The upload page (dropzone, thumbnail, category picker, “Back to Dashboard”).</td><td>changing the upload UI.</td></tr>
-        <tr><td><code>admin/_nav.php</code></td><td>The admin side menu (also the mobile hamburger drawer for admin).</td><td>adding an admin menu item.</td></tr>
+        <tr><td><code>favorites/index.php</code></td><td>The user's Favorites page: a “Following” section (category cards) + a “Favorites” media grid.</td><td>changing the Favorites page.</td></tr>
+        <tr><td><code>notifications/index.php</code></td><td>The notifications page: Uploads / Activity / Following blocks.</td><td>changing the notifications page.</td></tr>
+        <tr><td><code>share/show.php</code> · <code>share/expired.php</code></td><td>The public shared-item viewer and the “link expired” page.</td><td>changing the public share experience.</td></tr>
+        <tr><td><code>admin/_nav.php</code></td><td>The admin side menu (also the mobile hamburger drawer for admin), with a pending-downloads badge.</td><td>adding an admin menu item.</td></tr>
         <tr><td><code>admin/dashboard.php</code></td><td>Admin overview: stats, recent activity, who's online.</td><td>changing admin stats.</td></tr>
         <tr><td><code>admin/users.php</code></td><td>User list + create/edit forms with permission checkboxes.</td><td>changing user management UI.</td></tr>
         <tr><td><code>admin/categories.php</code></td><td>Category management (add/delete nested categories).</td><td>changing category admin.</td></tr>
         <tr><td><code>admin/companies.php</code></td><td>Company management.</td><td>changing company admin.</td></tr>
+        <tr><td><code>admin/download_requests.php</code></td><td>The download-request review queue (approve/reject).</td><td>changing the approval UI.</td></tr>
+        <tr><td><code>admin/analytics.php</code></td><td>Analytics dashboard: CSS bar charts, storage, active users, top content, CSV export links.</td><td>changing analytics visuals.</td></tr>
         <tr><td><code>admin/activity.php</code></td><td>The audit log table (last 200 events).</td><td>changing the log view.</td></tr>
         <tr><td><code>errors/403.php</code></td><td>“Forbidden” page.</td><td>restyling the 403.</td></tr>
         <tr><td><code>errors/404.php</code></td><td>“Not found” page.</td><td>restyling the 404.</td></tr>
+        <tr><td><code>errors/link-expired.php</code></td><td>Shown when an approved download link is used/expired.</td><td>restyling that message.</td></tr>
       </table></div>
 
       <h3>4.7 — Front-end assets (<code>public/assets/</code>)</h3>
       <div class="tablewrap"><table>
         <tr><th>File</th><th>Purpose</th><th>Edit it when…</th></tr>
         <tr><td><code>css/app.css</code></td><td>ALL styling for the entire app (colours, layout, drawers, viewer, tables, responsive rules).</td><td>changing any look/spacing/colour, or mobile behaviour.</td></tr>
-        <tr><td><code>js/app.js</code></td><td>Theme toggle, popovers, category-tree expand/collapse, the shared mobile drawer system, video-card hover preview.</td><td>changing global UI behaviour or the hamburger drawers.</td></tr>
-        <tr><td><code>js/upload.js</code></td><td>Drag-drop upload, progress bar, category selection + count badges (works on Upload and Edit pages).</td><td>changing upload UX or category counters.</td></tr>
+        <tr><td><code>js/app.js</code></td><td>Theme toggle, popovers, category-tree expand/collapse, the shared mobile drawer system, video-card hover preview, the notification bell feed, favorite/follow/share AJAX toggles, the global loading bar + toast helper (<code>window.gsToast</code>, <code>window.GSLoading</code>).</td><td>changing global UI behaviour, the bell, loading states or the hamburger drawers.</td></tr>
+        <tr><td><code>js/upload.js</code></td><td>Drag-drop upload, progress bar, category selection + count badges, mutually-exclusive category messaging, toast/scroll/highlight validation (works on Upload and Edit pages), and the Edit “replace file” pickers + thumbnail-required check.</td><td>changing upload/edit UX, category counters or validation.</td></tr>
         <tr><td><code>js/player.js</code></td><td>Video player: HLS.js setup + the three-dot settings menu (Quality + Playback speed).</td><td>changing the player or quality menu.</td></tr>
-        <tr><td><code>js/ppt-viewer.js</code></td><td>Renders PowerPoint in the browser via PPTXjs when no PDF preview exists.</td><td>changing PPT viewing.</td></tr>
+        <tr><td><code>js/doc-viewer.js</code></td><td>Renders PDFs (and server-converted PPTs) in-browser via PDF.js with fit-to-width and zoom.</td><td>changing PDF/PPT-PDF viewing.</td></tr>
+        <tr><td><code>js/ppt-viewer.js</code></td><td>Renders PowerPoint in the browser via PPTXjs when no PDF preview exists; slide-by-slide nav + fullscreen.</td><td>changing PPT viewing.</td></tr>
         <tr><td><code>js/search-suggest.js</code></td><td>The top search box autocomplete dropdown.</td><td>changing search suggestions UI.</td></tr>
-        <tr><td><code>js/watermark.js</code></td><td>Paints the moving “name · email · time” watermark over media.</td><td>changing watermark look/behaviour.</td></tr>
+        <tr><td><code>js/watermark.js</code></td><td>Paints the moving “name · time” watermark over media (currently disabled in the UI).</td><td>changing watermark look/behaviour.</td></tr>
         <tr><td><code>js/security.js</code></td><td>Anti-copy deterrents: blocks right-click/drag on media, dev-tool shortcuts, blurs media when tab loses focus.</td><td>adjusting protection deterrents.</td></tr>
       </table></div>
 
       <h3>4.8 — Database scripts (<code>database/</code>)</h3>
       <div class="tablewrap"><table>
         <tr><th>File</th><th>Purpose</th></tr>
-        <tr><td><code>schema.sql</code></td><td>Creates every table, index and relationship. Run once on a fresh database.</td></tr>
-        <tr><td><code>seed.sql</code></td><td>Inserts starter data: 4 roles, permissions, the default super admin, both sections, the full category trees and ~67 occasions.</td></tr>
-        <tr><td><code>migrations/…hybrid_subcategories.sql</code></td><td>Adds occasion-based subcategories under “Hybrid”.</td></tr>
-        <tr><td><code>migrations/…backfill_media_category_ancestors.sql</code></td><td>Back-fills older media so parent categories are attached (so filters work).</td></tr>
-        <tr><td><code>migrations/…companies.sql</code></td><td>Adds the <code>companies</code> table and links media to a company.</td></tr>
+        <tr><td><code>schema.sql</code></td><td>Creates every table, index and relationship — including <code>companies</code>, <code>favorites</code>, <code>share_links</code>, <code>download_requests</code>, <code>notifications</code> and <code>category_follows</code>. Run once on a fresh database.</td></tr>
+        <tr><td><code>seed.sql</code></td><td>Inserts starter data: roles, permissions, the default super admin, both sections, and the full category trees (Gimmick / Art / Hybrid incl. all medical-day, festival &amp; wellness subcategories).</td></tr>
       </table></div>
-      <div class="cal warn"><div class="t">🟠 Important</div>The <code>companies</code> table lives in a <i>migration</i>, not in <code>schema.sql</code>. On a brand-new database, run <code>schema.sql</code>, then <code>seed.sql</code>, then all migration files in date order.</div>
+      <div class="cal ok"><div class="t">🟢 Single source of truth</div>All earlier one-off migrations have been merged into <code>schema.sql</code> and <code>seed.sql</code>. On a brand-new database simply run <code>schema.sql</code> then <code>seed.sql</code> — there are no separate migration files to apply.</div>
     </section>
 
 
@@ -904,15 +969,25 @@ sequenceDiagram
       </div>
 
       <h3>API structure</h3>
-      <p>Most “endpoints” return HTML pages. A few return <b>JSON</b> (data instead of a page) for JavaScript to use:</p>
+      <p>Most “endpoints” return HTML pages. A number return <b>JSON</b> (data instead of a page) for JavaScript, and some stream raw bytes:</p>
       <div class="tablewrap"><table>
         <tr><th>URL</th><th>Returns</th><th>Used by</th></tr>
         <tr><td><code>GET /search/suggest?q=…</code></td><td>JSON suggestions</td><td><code>search-suggest.js</code></td></tr>
         <tr><td><code>POST /upload</code></td><td>JSON success/error</td><td><code>upload.js</code></td></tr>
+        <tr><td><code>POST /favorites/toggle/{uuid}</code></td><td>JSON <code>{favorited}</code></td><td>heart buttons (<code>app.js</code>)</td></tr>
+        <tr><td><code>POST /categories/{id}/follow</code></td><td>JSON <code>{following}</code></td><td>follow buttons (<code>app.js</code>)</td></tr>
+        <tr><td><code>POST /media/{uuid}/share</code></td><td>JSON <code>{url, expires_human}</code></td><td>share panel (<code>app.js</code>)</td></tr>
+        <tr><td><code>GET /notifications/feed</code></td><td>JSON <code>{count, items}</code></td><td>bell dropdown (<code>app.js</code>)</td></tr>
+        <tr><td><code>POST /notifications/read-all</code> · <code>/{id}/read</code></td><td>JSON ok</td><td>bell (<code>app.js</code>)</td></tr>
         <tr><td><code>GET /stream/{uuid}?token=…</code></td><td>The file bytes (video/image/etc.)</td><td>the video/PPT players</td></tr>
         <tr><td><code>GET /thumb/{uuid}</code> · <code>/preview/{uuid}</code></td><td>image/PDF bytes</td><td>cards &amp; viewers</td></tr>
         <tr><td><code>GET /download/{uuid}</code></td><td>file download (if permitted)</td><td>download button</td></tr>
+        <tr><td><code>POST /media/{uuid}/download-request</code></td><td>redirect + flash</td><td>request-download form</td></tr>
+        <tr><td><code>GET /download/approved/{token}</code></td><td>single-use file download</td><td>approved-download button</td></tr>
+        <tr><td><code>GET /s/{token}</code> · <code>/s/{token}/stream|thumb|preview</code></td><td><b>public</b> shared page / file bytes (no login)</td><td>share-link recipients</td></tr>
+        <tr><td><code>GET /admin/analytics/export?report=…</code></td><td>CSV file</td><td>analytics page</td></tr>
       </table></div>
+      <div class="cal note"><div class="t">🔵 JSON convention</div>AJAX endpoints detect JSON callers via the <code>X-Requested-With: XMLHttpRequest</code> header (sent by the front-end) and reply with JSON; the same routes degrade to a normal redirect + flash message when called without it, so they keep working without JavaScript.</div>
 
       <h3>Database interactions</h3>
       <p>Controllers never write raw SQL. They call Models, which use <code>Database</code>'s safe helpers with “prepared statements”
@@ -947,6 +1022,15 @@ erDiagram
   USERS ||--o{ USER_SESSIONS : "has"
   USERS ||--o{ STREAM_TOKENS : "holds"
   MEDIA ||--o{ STREAM_TOKENS : "for"
+  USERS ||--o{ FAVORITES : "likes"
+  MEDIA ||--o{ FAVORITES : ""
+  USERS ||--o{ CATEGORY_FOLLOWS : "follows"
+  CATEGORIES ||--o{ CATEGORY_FOLLOWS : ""
+  USERS ||--o{ SHARE_LINKS : "creates"
+  MEDIA ||--o{ SHARE_LINKS : "for"
+  USERS ||--o{ DOWNLOAD_REQUESTS : "requests"
+  MEDIA ||--o{ DOWNLOAD_REQUESTS : "for"
+  USERS ||--o{ NOTIFICATIONS : "receives"
       </div>
 
       <h3>Key tables explained</h3>
@@ -955,7 +1039,7 @@ erDiagram
         <div class="tablewrap"><table>
           <tr><th>Column</th><th>Meaning</th></tr>
           <tr><td><code>id</code></td><td>Unique number for each user.</td></tr>
-          <tr><td><code>name, email</code></td><td>Display name and login email (email is unique).</td></tr>
+          <tr><td><code>name, username</code></td><td>Display name and unique login username (letters &amp; numbers only).</td></tr>
           <tr><td><code>password_hash</code></td><td>The password stored <i>scrambled</i> (bcrypt) — never in plain text.</td></tr>
           <tr><td><code>role_id</code></td><td>Points to a row in <code>roles</code>.</td></tr>
           <tr><td><code>can_graphics, can_events</code></td><td>Section access switches.</td></tr>
@@ -963,7 +1047,7 @@ erDiagram
           <tr><td><code>is_active</code></td><td>0 = deactivated (can't log in).</td></tr>
           <tr><td><code>last_login_at, last_login_ip, created_at, updated_at</code></td><td>Bookkeeping.</td></tr>
         </table></div>
-        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", email: "admin@greyshades.local", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
+        <p><b>Example record:</b> <code>{ id: 1, name: "Super Admin", username: "admin", role_id: 1, can_graphics:1, can_events:1, can_upload:1, … }</code></p>
       </div></details>
 
       <details class="box"><summary>roles &amp; permissions — what each role means</summary><div class="body">
@@ -1029,6 +1113,18 @@ erDiagram
           <tr><td><code>failed_logins</code></td><td>Wrong-password attempts (for throttling).</td></tr>
         </table></div>
       </div></details>
+
+      <details class="box"><summary>favorites, category_follows, share_links, download_requests, notifications — engagement tables</summary><div class="body">
+        <div class="tablewrap"><table>
+          <tr><th>Table</th><th>Purpose &amp; key columns</th></tr>
+          <tr><td><code>favorites</code></td><td>Per-user “likes”. One row per <code>(user_id, media_id)</code> (unique pair). Private to the owning user.</td></tr>
+          <tr><td><code>category_follows</code></td><td>A user subscribes to a category. Unique <code>(user_id, category_id)</code>; drives new-upload notifications and the Favorites → Following list.</td></tr>
+          <tr><td><code>share_links</code></td><td>Secure expiring public links. <code>token</code> (unique), <code>media_id</code>, <code>created_by</code>, <code>expires_at</code>, <code>revoked</code>, <code>access_count</code>. A token unlocks exactly one item until it expires/revokes.</td></tr>
+          <tr><td><code>download_requests</code></td><td>The request→approval workflow. <code>status</code> (pending/approved/rejected), single-use <code>token</code>, <code>used_at</code>, <code>expires_at</code>, <code>reviewed_by</code>. Approval mints a token bound to the requester; it works once.</td></tr>
+          <tr><td><code>notifications</code></td><td>In-app bell. <code>type</code>, <code>title</code>, <code>body</code>, <code>url</code>, <code>is_read</code>, and <code>viewed_at</code> (set on first view; the row is auto-removed 24h later, per user).</td></tr>
+        </table></div>
+        <div class="cal note"><div class="t">🔵 Section visibility still applies</div>Favorites, related media and notifications all respect the same section permissions as browsing — a user only ever sees items in sections they can access.</div>
+      </div></details>
     </section>
 
     <!-- ===================================================== SECTION 8 -->
@@ -1042,13 +1138,13 @@ sequenceDiagram
   participant U as User
   participant A as AuthController.login()
   participant DB as Database
-  U->>A: submit email + password
-  A->>A: CSRF check + email format
+  U->>A: submit username + password
+  A->>A: CSRF check + username format (letters & numbers)
   A->>DB: count recent failed_logins for this IP
   alt 5+ fails in 15 min
     A-->>U: "Too many attempts" (blocked)
   else allowed
-    A->>DB: find active user by email
+    A->>DB: find active user by username
     A->>A: password_verify(password, stored hash)
     alt wrong
       A->>DB: insert failed_logins row
@@ -1227,6 +1323,49 @@ canAccessSections( Media::sectionCodesFor(item) )</code></pre>
           <div>Files</div><div><code>app.js</code> (drawer controller), <code>app.css</code> (<code>.drawer</code> styles), <code>admin/_nav.php</code>, <code>dashboard/_sidebar.php</code>, <code>dashboard/index.php</code></div>
         </div>
         <p>Full details in <a href="#s11">Section 11</a>.</p>
+      </div></details>
+
+      <details class="box"><summary>Favorites (per-user “likes”)</summary><div class="body">
+        <div class="kv">
+          <div>What</div><div>Any user can favorite any video/image/PDF/PPT via the heart on a card or the detail page. Favorites are private to each user.</div>
+          <div>Files</div><div><code>FavoritesController</code>, <code>Favorite</code> model, <code>favorites/index.php</code>, <code>dashboard/_card.php</code> (heart), <code>media/show.php</code>, <code>app.js</code> (toggle), <code>favorites</code> table.</div>
+        </div>
+        <p>The Favorites page has two sections — <b>Following</b> (followed-category cards) and <b>Favorites</b> (the media grid).</p>
+      </div></details>
+
+      <details class="box"><summary>Follow categories &amp; Notification bell</summary><div class="body">
+        <div class="kv">
+          <div>What</div><div>Users follow categories; the bell shows an unread count + a dropdown feed. Notifications fire for new uploads in sections the user can access, share-link events, and download approvals/rejections. Viewed notifications auto-clear after 24h.</div>
+          <div>Files</div><div><code>NotificationController</code>, <code>FollowController</code>, <code>Notification</code>/<code>CategoryFollow</code> models, <code>notifications/index.php</code>, <code>layouts/app.php</code> (bell), <code>app.js</code> (feed), <code>notifications</code> &amp; <code>category_follows</code> tables.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Expiring share links</summary><div class="body">
+        <div class="kv">
+          <div>What</div><div>From the detail page, generate a secure, password-free public link (1h–30d) to a single item. Recipients need no login; the link stops working at expiry. The creator and admins are notified.</div>
+          <div>Files</div><div><code>ShareController</code>, <code>SharePublicController</code>, <code>ShareLink</code> model, <code>Core/FileResponse</code>, <code>layouts/share.php</code>, <code>share/show.php</code>, <code>share/expired.php</code>, <code>share_links</code> table.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Download request &amp; approval</summary><div class="body">
+        <div class="kv">
+          <div>What</div><div>When direct download is off, users request access; admins approve/reject in the admin queue. Approval mints a <b>single-use</b> token bound to the requester — it works once, then auto-revokes; no other user can use it.</div>
+          <div>Files</div><div><code>DownloadRequestController</code>, admin methods in <code>AdminController</code>, <code>DownloadRequest</code> model, <code>admin/download_requests.php</code>, <code>media/show.php</code>, <code>download_requests</code> table.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Related media</summary><div class="body">
+        <div class="kv">
+          <div>What</div><div>The detail page shows related items — ranked by shared categories, topped up by same media type — always filtered to the viewer's sections.</div>
+          <div>Files</div><div><code>Media::related()</code>, <code>media/show.php</code> (Related strip), <code>dashboard/_card.php</code>.</div>
+        </div>
+      </div></details>
+
+      <details class="box"><summary>Admin analytics &amp; CSV export</summary><div class="body">
+        <div class="kv">
+          <div>What</div><div>Trends (views/downloads/uploads over 30 days) as lightweight CSS bar charts, storage by type, most-active users, action breakdown, top viewed/downloaded — plus CSV export of activity and downloads.</div>
+          <div>Files</div><div><code>AdminController::analytics()/analyticsExport()</code>, <code>Analytics</code> model, <code>admin/analytics.php</code>.</div>
+        </div>
       </div></details>
     </section>
 
@@ -1483,7 +1622,99 @@ flowchart TD
     <!-- ===================================================== SECTION 15 -->
     <section class="section" id="s15">
       <h2><span class="num">15</span> Change Request Guide</h2>
-      <p class="lead">Common “I want to…” requests, with the exact files to edit and what to test afterwards.</p>
+      <p class="lead">How to make a change <b>correctly and completely</b> anywhere in this project — the files to touch, the
+      dependencies to keep in sync, and how to verify nothing else broke. Read <a href="#s15-howto">15.0 — Making changes across the project</a>
+      first, then use the “I want to…” recipes below for specific tasks.</p>
+
+      <h3 id="s15-howto">15.0 — Making changes across the project (developer checklist)</h3>
+      <p>This app is a hand-built PHP MVC with <b>no build step</b> and <b>no framework magic</b>, so a change is "done" only when
+      every layer it touches is updated together. Use this as a pre-flight + post-flight checklist for <em>any</em> change.</p>
+
+      <div class="cal tip"><div class="t">🟢 The golden path of a change</div>
+        Route → Middleware (gate) → Controller → Model (SQL) → View (HTML) → CSS (look) → JS (behaviour) →
+        Database (schema/seed) → Config/.env → Docs → Test. If your change skips a layer, double-check you genuinely don't need it.
+      </div>
+
+      <h4>① Files &amp; modules affected (map before you start)</h4>
+      <p>Trace the change end-to-end and list every file. Use this “if you touch X, also update Y” map:</p>
+      <div class="tablewrap"><table>
+        <tr><th>If you change…</th><th>Also update / check…</th></tr>
+        <tr><td>A <b>URL / endpoint</b></td><td><code>app/routes.php</code> (path + middleware), the controller method, any nav link in <code>layouts/app.php</code> / <code>admin/_nav.php</code>, and any JS that calls the URL.</td></tr>
+        <tr><td>A <b>Controller</b></td><td>The View(s) it renders (variables passed must match), the Model methods it calls, and middleware on its route.</td></tr>
+        <tr><td>A <b>Model / SQL</b></td><td>The table columns it reads/writes (<code>schema.sql</code>), every controller that calls the method, and indexes for new <code>WHERE</code>/<code>ORDER BY</code> columns.</td></tr>
+        <tr><td>A <b>View</b></td><td>The controller that supplies its variables, the CSS classes it uses (<code>app.css</code>), and any JS hooks (<code>data-*</code> attributes / ids).</td></tr>
+        <tr><td>A <b>DB table/column</b></td><td><code>database/schema.sql</code> (fresh installs), the owning Model, <code>seed.sql</code> if it needs starter data, and Section&nbsp;7 of these docs.</td></tr>
+        <tr><td>A <b>JS behaviour</b></td><td>The matching markup (<code>data-*</code> / ids it queries) and any CSS state classes (<code>.is-loading</code>, <code>.field-invalid</code>, etc.).</td></tr>
+        <tr><td>A <b>permission / section rule</b></td><td><code>Core/Auth.php</code>, the <code>can_*</code> columns, <code>admin/users.php</code>, and every <code>RequireAuth/RequireAdmin</code> route + in-view checks.</td></tr>
+        <tr><td>A <b>media-processing</b> step</td><td><code>Services/MediaProcessor.php</code> (used by BOTH upload and the Edit “replace file” path), and the relevant viewer JS.</td></tr>
+      </table></div>
+
+      <h4>② Frontend &amp; backend dependencies</h4>
+      <ul class="clean">
+        <li><b>No bundler / package manager.</b> JS and CSS are plain files served as-is from <code>public/assets/</code>. There is nothing to compile — edit the file and reload.</li>
+        <li><b>Cache-busting:</b> assets are included via <code>asset('js/app.js')</code>, which appends <code>?v=…</code>. If you add a <em>new</em> asset file, load it through <code>asset()</code> too so browsers don't serve a stale copy.</li>
+        <li><b>Front-end → back-end contract:</b> AJAX calls send <code>X-Requested-With: XMLHttpRequest</code> + the CSRF token from the <code>&lt;meta name="csrf-token"&gt;</code> tag. Server endpoints reply JSON to those callers and fall back to redirect+flash otherwise — preserve both paths when editing an endpoint.</li>
+        <li><b>Shared JS helpers:</b> <code>window.gsToast(msg,type)</code> (toasts) and <code>window.GSLoading.start()/finish()</code> (top progress bar) are defined in <code>app.js</code>; reuse them instead of new patterns.</li>
+        <li><b>External libraries</b> (hls.js, PPTXjs, PDF.js, Mermaid) load from a CDN. The Content-Security-Policy in <code>app/bootstrap.php</code> must allow any new CDN host you introduce — otherwise the browser blocks it.</li>
+        <li><b>PHP autoloading</b> is PSR-4-ish by namespace; just put a class in the right folder (<code>App\Controllers</code>, <code>App\Models</code>, …) and reference it — no manual registration.</li>
+      </ul>
+
+      <h4>③ API &amp; database updates</h4>
+      <ul class="clean">
+        <li><b>New endpoint:</b> register it in <code>app/routes.php</code> with the correct middleware. Public (no-login) routes simply omit <code>RequireAuth</code> (that's how <code>/s/{token}</code> share links work) — be deliberate about that.</li>
+        <li><b>Route params</b> are passed to the method in order. Numeric params arrive as <code>int</code>; keep tokens/uuids typed as <code>string</code>.</li>
+        <li><b>All SQL lives in Models</b> via <code>Database</code>'s prepared statements — never write SQL in a controller or interpolate user input into a query.</li>
+        <li><b>Schema changes:</b> edit <code>database/schema.sql</code> (the single source of truth — all migrations have been merged in). Add the column/table, its indexes, and any foreign keys. Update the owning Model and add starter rows to <code>seed.sql</code> if needed.</li>
+        <li><b>Existing databases:</b> there are no migration files anymore, so for a live DB apply the equivalent <code>ALTER TABLE</code> / <code>CREATE TABLE</code> by hand (mirror exactly what you added to <code>schema.sql</code>).</li>
+        <li><b>Backwards-compatible reads:</b> when adding a column a Model selects with <code>SELECT *</code>, views may reference it immediately — guard with <code>?? null</code> in templates if a row might predate the column.</li>
+      </ul>
+
+      <h4>④ Configuration &amp; environment variables</h4>
+      <ul class="clean">
+        <li><b>App config</b> is <code>config/config.php</code>, which reads <code>.env</code> via <code>env()</code> and is consumed through <code>config('group.key')</code>. Add new tunables there (e.g. upload limits, token TTLs, feature flags).</li>
+        <li><b>Secrets &amp; per-environment values</b> (DB credentials, <code>APP_URL</code>, <code>STREAM_TOKEN_TTL_MIN</code>, <code>SESSION_LIFETIME_MIN</code>, <code>ENABLE_WATERMARK</code>, <code>ENABLE_ANTI_INSPECT</code>) live in <code>.env</code> — never hard-code them and never commit <code>.env</code>.</li>
+        <li>If you add a new <code>.env</code> key, document it in <a href="#s16">Section 16</a> and provide a sensible default in <code>config.php</code> so the app still boots without it.</li>
+        <li><b>PHP limits</b> for big uploads (<code>upload_max_filesize</code>, <code>post_max_size</code>, <code>max_execution_time</code>, <code>memory_limit</code>) are server-level (php.ini), not app config — note them when changing upload size.</li>
+      </ul>
+
+      <h4>⑤ Build &amp; deployment requirements</h4>
+      <ul class="clean">
+        <li><b>No build.</b> Deployment = sync the files. There is no <code>npm run build</code>, transpile or asset pipeline.</li>
+        <li><b>Web root</b> must point at <code>public/</code>; the <code>.htaccess</code> there routes everything through <code>public/index.php</code>. Keep <code>app/</code>, <code>config/</code>, <code>database/</code> and <code>storage/</code> outside the web root / non-public.</li>
+        <li><b>Fresh DB:</b> run <code>database/schema.sql</code> then <code>database/seed.sql</code>.</li>
+        <li><b>Optional binaries</b> (FFmpeg, ImageMagick, LibreOffice) power thumbnails/HLS/PPT-PDF. They degrade gracefully if missing — but video quality options and auto thumbnails depend on FFmpeg being installed on the server.</li>
+        <li><b>Storage permissions:</b> the web user must be able to write to <code>storage/</code> (uploads, HLS, previews, cache).</li>
+        <li><b>After deploy</b>, hard-refresh once; <code>asset()</code> versioning handles JS/CSS cache, but CDN/proxy caches may need a purge.</li>
+      </ul>
+
+      <h4>⑥ Testing &amp; validation steps</h4>
+      <ul class="clean">
+        <li><b>Syntax first:</b> <code>php -l path/to/file.php</code> for every PHP file you touched; <code>node --check public/assets/js/file.js</code> for JS.</li>
+        <li><b>Permissions matrix:</b> test as super admin, a section-limited user, and (for public routes) logged-out — confirm each sees exactly what they should.</li>
+        <li><b>Both response paths:</b> for AJAX endpoints, test with JS (JSON) and the no-JS fallback (redirect+flash).</li>
+        <li><b>Responsive:</b> check desktop, tablet and ≤420px phones (this app is mobile-first in many places).</li>
+        <li><b>Regression sweep</b> for the feature areas the request says to keep intact: login, upload, media viewing (video quality, PDF, PPT), favorites, follows, notifications, share links, download requests/approvals, analytics, and the admin panel.</li>
+        <li><b>Data integrity:</b> for anything touching media, verify relationships survive (favorites, shares, views, categories) — especially after a file <em>replace</em>.</li>
+      </ul>
+
+      <h4>⑦ Documentation update requirements</h4>
+      <ul class="clean">
+        <li>Update <b>this file</b> (<code>docs/documentation.html</code>): the file-by-file tables (§4), API list (§6), DB tables/ER (§7), Feature docs (§9), and add a recipe here in §15 if it's a new common task.</li>
+        <li>Keep the existing structure, tone and styling (callouts, tables, <code>details.box</code>); add rows rather than rewriting whole sections.</li>
+        <li>Update <code>README.md</code> if the change affects setup, env vars, or top-level features.</li>
+      </ul>
+
+      <h4>⑧ Other project-wide considerations</h4>
+      <ul class="clean">
+        <li><b>Security:</b> escape all output with <code>e()</code>; verify CSRF on every state-changing POST (<code>Csrf::verifyOrFail()</code>); gate routes with the right middleware; keep raw file paths out of URLs (use UUIDs + tokens).</li>
+        <li><b>Audit trail:</b> log meaningful actions with <code>ActivityLog::record()</code> so they appear in Admin → Activity and analytics.</li>
+        <li><b>Notifications:</b> if your change creates an event users care about, fan out a <code>Notification</code> (respecting section access) — and consider notifying admins for oversight.</li>
+        <li><b>Theme integrity:</b> reuse existing CSS variables (<code>--accent</code>, <code>--surface</code>, <code>--border</code>, …) and <em>append</em> new rules rather than rewriting existing ones, so the look stays consistent.</li>
+        <li><b>Graceful degradation:</b> wrap optional/external work (media tools, notification writes) so a failure logs and continues instead of breaking the page.</li>
+      </ul>
+
+      <h3>15.1 — Task recipes (“I want to…”)</h3>
+      <p>Common requests, with the exact files to edit and what to test afterwards.</p>
 
       <details class="box" open><summary>“I want to add a new page”</summary><div class="body">
         <ol class="clean">
@@ -1533,15 +1764,25 @@ flowchart TD
       <details class="box"><summary>“I want to add a new media type (e.g. audio)”</summary><div class="body">
         <ol class="clean">
           <li>Add its MIME to <code>config.php</code> <code>allowed_mimes</code>.</li>
-          <li>Add classification in <code>MediaProcessor::classify()</code> and the <code>media_type</code> enum in the DB.</li>
-          <li>Add a viewer branch in <code>media/show.php</code>.</li>
-          <li>Add an extension mapping in <code>UploadController::extFor()</code>.</li>
+          <li>Add classification in <code>MediaProcessor::classify()</code> and the <code>media_type</code> enum in <code>schema.sql</code>.</li>
+          <li>Generate any derivative (thumbnail/preview) in <code>MediaProcessor::deriveAll()</code> so BOTH upload and the Edit “replace file” path handle it.</li>
+          <li>Add a viewer branch in <code>media/show.php</code> (and <code>share/show.php</code> for the public viewer).</li>
+          <li>Add an extension mapping in BOTH <code>UploadController::extFor()</code> and <code>MediaController::extFor()</code>.</li>
         </ol>
-        <p><b>Test:</b> upload + view + thumbnail + download.</p>
+        <p><b>Test:</b> upload + view + thumbnail + download + replace + public share.</p>
       </div></details>
 
       <details class="box"><summary>“I want to log a new action”</summary><div class="body">
-        <p>Call <code>ActivityLog::record('media.share', 'media', $id, ['to'=&gt;$email]);</code> from the relevant controller. It appears in Admin → Activity.</p>
+        <p>Call <code>ActivityLog::record('media.share', 'media', $id, ['expires'=&gt;$when]);</code> from the relevant controller. It appears in Admin → Activity and feeds analytics.</p>
+      </div></details>
+
+      <details class="box"><summary>“I want to add a JSON / AJAX action (like favorite or follow)”</summary><div class="body">
+        <ol class="clean">
+          <li>Add a <code>POST</code> route in <code>routes.php</code> with <code>RequireAuth</code>.</li>
+          <li>In the controller: <code>Csrf::verifyOrFail()</code>, do the work via a Model, then reply JSON when <code>X-Requested-With</code> is present, else <code>flash()</code> + <code>redirect()</code>.</li>
+          <li>In the markup add a button with a <code>data-*</code> hook + the action URL; in <code>app.js</code> add a delegated <code>fetch()</code> handler sending the CSRF header. Reuse <code>window.gsToast</code> for feedback.</li>
+        </ol>
+        <p><b>Test:</b> with JS (no reload) and with JS disabled (redirect fallback); logged-out (gate).</p>
       </div></details>
     </section>
 

@@ -39,6 +39,62 @@ final class MediaProcessor
         return 'other';
     }
 
+    /**
+     * Generate all derivative assets (thumbnail, preview, HLS, duration,
+     * dimensions) for a stored original file. Shared by upload and by the
+     * "replace file" path in editing so both behave identically.
+     *
+     * @return array{0:?string,1:?string,2:?string,3:?int,4:?int,5:?int}
+     *         [thumbRel, previewRel, hlsMasterRel, durationSec, width, height]
+     */
+    public static function deriveAll(string $absPath, string $mime, string $type, string $uuid): array
+    {
+        $thumbRel = $previewRel = $hlsMasterRel = null;
+        $duration = $w = $h = null;
+
+        $thumbDir = '/uploads/thumbnails/' . date('Y/m');
+        $absThumbDir = storage_path($thumbDir);
+        if (!is_dir($absThumbDir)) @mkdir($absThumbDir, 0775, true);
+
+        if ($type === 'image') {
+            $thumbRel = $thumbDir . '/' . $uuid . '.jpg';
+            self::imageThumbnail($absPath, storage_path($thumbRel));
+            if ($info = @getimagesize($absPath)) { $w = $info[0]; $h = $info[1]; }
+        } elseif ($type === 'video') {
+            $thumbRel = $thumbDir . '/' . $uuid . '.jpg';
+            self::videoThumbnail($absPath, storage_path($thumbRel));
+            $duration = self::videoDuration($absPath);
+
+            $hlsDir = '/uploads/hls/' . $uuid;
+            $absHls = storage_path($hlsDir);
+            if (self::transcodeHls($absPath, $absHls)) {
+                $hlsMasterRel = $hlsDir . '/master.m3u8';
+            }
+        } elseif ($type === 'pdf') {
+            $previewDir = '/uploads/pdf-previews/' . date('Y/m');
+            if (!is_dir(storage_path($previewDir))) @mkdir(storage_path($previewDir), 0775, true);
+            $previewRel = $previewDir . '/' . $uuid . '.png';
+            self::pdfPreview($absPath, storage_path($previewRel));
+            $thumbRel = $previewRel;
+        } elseif ($type === 'ppt') {
+            $previewDir = '/uploads/ppt-previews/' . date('Y/m');
+            $absPreviewDir = storage_path($previewDir);
+            if (!is_dir($absPreviewDir)) @mkdir($absPreviewDir, 0775, true);
+            $previewRel = $previewDir . '/' . $uuid . '.pdf';
+            $thumbRel   = $thumbDir . '/' . $uuid . '.png';
+            $r = self::pptToPdfAndThumbnail(
+                $absPath,
+                storage_path($previewRel),
+                storage_path($thumbRel),
+                storage_path('/cache')
+            );
+            if (!$r['pdf'])   $previewRel = null;
+            if (!$r['thumb']) $thumbRel   = null;
+        }
+
+        return [$thumbRel, $previewRel, $hlsMasterRel, $duration, $w, $h];
+    }
+
     /** Generate a thumbnail for a video at ~1 second; returns relative path or null. */
     public static function videoThumbnail(string $absVideo, string $absThumbOut): ?string
     {

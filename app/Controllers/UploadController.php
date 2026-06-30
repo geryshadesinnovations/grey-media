@@ -10,7 +10,9 @@ use App\Core\Database;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Media;
+use App\Models\Notification;
 use App\Models\Section;
+use App\Models\User;
 use App\Services\MediaProcessor;
 
 final class UploadController
@@ -212,6 +214,27 @@ final class UploadController
             'title' => $title, 'mime' => $mime, 'size' => filesize($absPath),
         ]);
 
+        // Notify every user who has access to this media's section(s) - one
+        // notification per upload - so newly uploaded items show up in the
+        // "Uploads" feed for everyone who can see that section (the uploader
+        // included, so they can confirm their own upload landed). Section
+        // access mirrors Auth (super admins + the per-user can_graphics /
+        // can_events flags).
+        $sectionCodes = array_values(array_unique(
+            array_map(fn ($r) => (string) $r['section_code'], $allowedRows)
+        ));
+        $recipientIds = User::idsWithSectionAccess($sectionCodes);
+        if ($recipientIds) {
+            $label = implode(' & ', array_map('ucfirst', $sectionCodes));
+            Notification::createMany(
+                $recipientIds,
+                'upload',
+                'New ' . strtoupper($type) . ' in ' . $label,
+                '"' . $title . '" was just added to ' . $label . '.',
+                url('/media/' . $uuid)
+            );
+        }
+
         $this->jsonOk([
             'duplicate' => false,
             'media' => [
@@ -225,55 +248,7 @@ final class UploadController
     /** @return array{0:?string,1:?string,2:?string,3:?int,4:?int,5:?int} */
     private function processMedia(string $absPath, string $mime, string $type, string $uuid): array
     {
-        $thumbRel = $previewRel = $hlsMasterRel = null;
-        $duration = $w = $h = null;
-
-        $thumbDir = '/uploads/thumbnails/' . date('Y/m');
-        $absThumbDir = storage_path($thumbDir);
-        if (!is_dir($absThumbDir)) @mkdir($absThumbDir, 0775, true);
-
-        if ($type === 'image') {
-            $thumbRel = $thumbDir . '/' . $uuid . '.jpg';
-            MediaProcessor::imageThumbnail($absPath, storage_path($thumbRel));
-            if ($info = @getimagesize($absPath)) { $w = $info[0]; $h = $info[1]; }
-        } elseif ($type === 'video') {
-            $thumbRel = $thumbDir . '/' . $uuid . '.jpg';
-            MediaProcessor::videoThumbnail($absPath, storage_path($thumbRel));
-            $duration = MediaProcessor::videoDuration($absPath);
-
-            // Optional HLS transcode (CPU-heavy; usually queued. Phase 1: best-effort.)
-            $hlsDir = '/uploads/hls/' . $uuid;
-            $absHls = storage_path($hlsDir);
-            if (MediaProcessor::transcodeHls($absPath, $absHls)) {
-                $hlsMasterRel = $hlsDir . '/master.m3u8';
-            }
-        } elseif ($type === 'pdf') {
-            $previewDir = '/uploads/pdf-previews/' . date('Y/m');
-            if (!is_dir(storage_path($previewDir))) @mkdir(storage_path($previewDir), 0775, true);
-            $previewRel = $previewDir . '/' . $uuid . '.png';
-            MediaProcessor::pdfPreview($absPath, storage_path($previewRel));
-            $thumbRel = $previewRel; // reuse for grid
-        } elseif ($type === 'ppt') {
-            // Convert PPT/PPTX to a full PDF so users can navigate ALL slides
-            // in the browser's PDF viewer (not just see the first slide).
-            // Also render a first-slide PNG for the dashboard grid thumbnail.
-            $previewDir = '/uploads/ppt-previews/' . date('Y/m');
-            $absPreviewDir = storage_path($previewDir);
-            if (!is_dir($absPreviewDir)) @mkdir($absPreviewDir, 0775, true);
-            $previewRel = $previewDir . '/' . $uuid . '.pdf';
-            $thumbRel   = $thumbDir . '/' . $uuid . '.png';
-            $r = MediaProcessor::pptToPdfAndThumbnail(
-                $absPath,
-                storage_path($previewRel),
-                storage_path($thumbRel),
-                storage_path('/cache')
-            );
-            // If conversion failed (e.g. LibreOffice missing), drop preview
-            if (!$r['pdf'])   $previewRel = null;
-            if (!$r['thumb']) $thumbRel   = null;
-        }
-
-        return [$thumbRel, $previewRel, $hlsMasterRel, $duration, $w, $h];
+        return MediaProcessor::deriveAll($absPath, $mime, $type, $uuid);
     }
 
     private function detectMime(string $path, string $name): string
@@ -281,13 +256,37 @@ final class UploadController
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime  = $finfo ? (finfo_file($finfo, $path) ?: '') : '';
         if ($finfo) finfo_close($finfo);
+        $mime = strtolower(trim($mime));
 
-        // Refine based on extension for office docs (finfo can return zip for pptx)
         $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
-        if (in_array($ext, ['pptx'], true) && in_array($mime, ['application/zip','application/x-zip-compressed'], true)) {
+
+        // pptx is frequently detected as a generic zip container.
+        if ($ext === 'pptx' && in_array($mime, ['application/zip', 'application/x-zip-compressed'], true)) {
             return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
         }
-        if ($ext === 'ppt' && $mime === 'application/octet-stream') return 'application/vnd.ms-powerpoint';
+
+        // finfo can't always recognise a container (some valid MP4 variants come
+        // back as application/octet-stream / empty, depending on the server's
+        // magic database). When the result is generic - or it's an MP4 reported
+        // as some other video/* type - fall back to a trusted extension map so a
+        // genuine .mp4 isn't wrongly rejected. We never override a concrete,
+        // non-generic mismatch (e.g. a .jpg that is really a PNG stays image/png).
+        $byExt = [
+            'mp4'  => 'video/mp4',  'm4v'  => 'video/mp4',
+            'png'  => 'image/png',  'jpg'  => 'image/jpeg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp', 'gif'  => 'image/gif',
+            'pdf'  => 'application/pdf',
+            'ppt'  => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        ];
+        $generic = ['', 'application/octet-stream', 'application/x-empty', 'binary'];
+        if (isset($byExt[$ext])) {
+            $isVideoExt = in_array($ext, ['mp4', 'm4v'], true);
+            if (in_array($mime, $generic, true) || ($isVideoExt && str_starts_with($mime, 'video/'))) {
+                return $byExt[$ext];
+            }
+        }
+
         return $mime ?: 'application/octet-stream';
     }
 

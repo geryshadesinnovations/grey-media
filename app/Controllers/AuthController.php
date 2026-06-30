@@ -14,8 +14,8 @@ final class AuthController
     {
         if (Auth::check()) redirect('/dashboard');
         echo view('auth/login', [
-            'error' => flash('error'),
-            'email' => old('email', ''),
+            'error'    => flash('error'),
+            'username' => old('username', ''),
         ]);
     }
 
@@ -23,8 +23,8 @@ final class AuthController
     {
         Csrf::verifyOrFail();
 
-        $email = trim((string) ($_POST['email'] ?? ''));
-        $pass  = (string) ($_POST['password'] ?? '');
+        $username = trim((string) ($_POST['username'] ?? ''));
+        $pass     = (string) ($_POST['password'] ?? '');
 
         // Throttle: more than 5 failed attempts from this IP in last 15 min -> reject
         $recent = (int) Database::scalar(
@@ -33,19 +33,20 @@ final class AuthController
         );
         if ($recent >= 5) {
             flash('error', 'Too many failed login attempts. Please try again later.');
-            $_SESSION['__old']['email'] = $email;
+            $_SESSION['__old']['username'] = $username;
             redirect('/login');
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $pass === '') {
-            flash('error', 'Please enter a valid email and password.');
-            $_SESSION['__old']['email'] = $email;
+        // Usernames are letters + numbers only.
+        if (!preg_match('/^[A-Za-z0-9]+$/', $username) || $pass === '') {
+            flash('error', 'Please enter a valid username and password.');
+            $_SESSION['__old']['username'] = $username;
             redirect('/login');
         }
 
-        if (!Auth::attempt($email, $pass)) {
+        if (!Auth::attempt($username, $pass)) {
             flash('error', 'Invalid credentials.');
-            $_SESSION['__old']['email'] = $email;
+            $_SESSION['__old']['username'] = $username;
             redirect('/login');
         }
 

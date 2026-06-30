@@ -47,7 +47,7 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
     `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `name`            VARCHAR(120) NOT NULL,
-    `email`           VARCHAR(190) NOT NULL,
+    `username`        VARCHAR(64) NOT NULL COMMENT 'Login identifier - letters & numbers only',
     `password_hash`   VARCHAR(255) NOT NULL,
     `role_id`         INT UNSIGNED NOT NULL,
     `can_graphics`    TINYINT(1) NOT NULL DEFAULT 0,
@@ -63,7 +63,7 @@ CREATE TABLE `users` (
     `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uq_users_email` (`email`),
+    UNIQUE KEY `uq_users_username` (`username`),
     KEY `idx_users_role` (`role_id`),
     KEY `idx_users_active` (`is_active`),
     CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`)
@@ -138,6 +138,20 @@ CREATE TABLE `tags` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- COMPANIES  (optional brand/company a media item belongs to)
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `companies`;
+CREATE TABLE `companies` (
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`       VARCHAR(191) NOT NULL,
+    `slug`       VARCHAR(191) NOT NULL,
+    `is_active`  TINYINT(1) NOT NULL DEFAULT 1,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_companies_slug` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- MEDIA  (single source of truth - never duplicated physically)
 -- ---------------------------------------------------------------------
 DROP TABLE IF EXISTS `media`;
@@ -145,6 +159,7 @@ CREATE TABLE `media` (
     `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `uuid`          CHAR(36) NOT NULL,
     `section_id`    TINYINT UNSIGNED NOT NULL,
+    `company_id`    INT UNSIGNED NULL,
     `title`         VARCHAR(255) NOT NULL,
     `description`   TEXT NULL,
     `keywords`      TEXT NULL,
@@ -173,12 +188,14 @@ CREATE TABLE `media` (
     UNIQUE KEY `uq_media_uuid` (`uuid`),
     UNIQUE KEY `uq_media_hash` (`file_hash`),
     KEY `idx_media_section`   (`section_id`),
+    KEY `idx_media_company`   (`company_id`),
     KEY `idx_media_type`      (`media_type`),
     KEY `idx_media_uploader`  (`uploaded_by`),
     KEY `idx_media_created`   (`created_at`),
     KEY `idx_media_featured`  (`is_featured`),
     FULLTEXT KEY `ft_media_search` (`title`,`description`,`keywords`),
     CONSTRAINT `fk_media_section`   FOREIGN KEY (`section_id`)  REFERENCES `sections`(`id`),
+    CONSTRAINT `fk_media_company`   FOREIGN KEY (`company_id`)  REFERENCES `companies`(`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_media_uploader`  FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -327,14 +344,124 @@ CREATE TABLE `stream_tokens` (
     CONSTRAINT `fk_st_media` FOREIGN KEY (`media_id`) REFERENCES `media`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------------------------------------------------------------------
+-- FAVORITES  (per-user "likes" - one row per user/media pair)
+-- A user can favorite any media item (video/image/pdf/ppt). Favorites are
+-- strictly personal: only the owning user ever sees their own collection.
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `favorites`;
+CREATE TABLE `favorites` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`    INT UNSIGNED NOT NULL,
+    `media_id`   BIGINT UNSIGNED NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_fav_user_media` (`user_id`,`media_id`),
+    KEY `idx_fav_user` (`user_id`),
+    KEY `idx_fav_media` (`media_id`),
+    CONSTRAINT `fk_fav_user`  FOREIGN KEY (`user_id`)  REFERENCES `users`(`id`)  ON DELETE CASCADE,
+    CONSTRAINT `fk_fav_media` FOREIGN KEY (`media_id`) REFERENCES `media`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- SHARE LINKS  (secure, time-limited public links to a single item)
+-- No password; the random token grants view-only access to exactly one
+-- media item until it expires (or is revoked).
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `share_links`;
+CREATE TABLE `share_links` (
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `token`            CHAR(64) NOT NULL,
+    `media_id`         BIGINT UNSIGNED NOT NULL,
+    `created_by`       INT UNSIGNED NOT NULL,
+    `expires_at`       DATETIME NOT NULL,
+    `revoked`          TINYINT(1) NOT NULL DEFAULT 0,
+    `access_count`     INT UNSIGNED NOT NULL DEFAULT 0,
+    `last_accessed_at` DATETIME NULL,
+    `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_share_token` (`token`),
+    KEY `idx_share_media` (`media_id`),
+    KEY `idx_share_creator` (`created_by`),
+    KEY `idx_share_expires` (`expires_at`),
+    CONSTRAINT `fk_share_media` FOREIGN KEY (`media_id`)   REFERENCES `media`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_share_user`  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- DOWNLOAD REQUESTS  (request -> admin approve/reject -> single-use token)
+-- When a file's direct download is disabled, a user can request one. An
+-- admin approves it, which mints a single-use token bound to that user.
+-- After one successful download the token is consumed (used_at set).
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `download_requests`;
+CREATE TABLE `download_requests` (
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `media_id`    BIGINT UNSIGNED NOT NULL,
+    `user_id`     INT UNSIGNED NOT NULL,
+    `reason`      VARCHAR(500) NULL,
+    `status`      ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    `token`       CHAR(64) NULL,
+    `used_at`     DATETIME NULL,
+    `expires_at`  DATETIME NULL,
+    `reviewed_by` INT UNSIGNED NULL,
+    `reviewed_at` DATETIME NULL,
+    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_dr_token` (`token`),
+    KEY `idx_dr_media` (`media_id`),
+    KEY `idx_dr_user` (`user_id`),
+    KEY `idx_dr_status` (`status`),
+    CONSTRAINT `fk_dr_media`    FOREIGN KEY (`media_id`)    REFERENCES `media`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_dr_user`     FOREIGN KEY (`user_id`)     REFERENCES `users`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_dr_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- NOTIFICATIONS  (per-user in-app notification bell)
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `notifications`;
+CREATE TABLE `notifications` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`    INT UNSIGNED NOT NULL,
+    `type`       VARCHAR(48) NOT NULL,
+    `title`      VARCHAR(190) NOT NULL,
+    `body`       VARCHAR(500) NULL,
+    `url`        VARCHAR(255) NULL,
+    `is_read`    TINYINT(1) NOT NULL DEFAULT 0,
+    `viewed_at`  DATETIME NULL COMMENT 'First time the user viewed it; auto-removed 24h later',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_notif_user_read` (`user_id`,`is_read`),
+    KEY `idx_notif_user_created` (`user_id`,`created_at`),
+    KEY `idx_notif_viewed` (`viewed_at`),
+    CONSTRAINT `fk_notif_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- CATEGORY FOLLOWS  (user subscribes to a category -> notified on new uploads)
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `category_follows`;
+CREATE TABLE `category_follows` (
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`     INT UNSIGNED NOT NULL,
+    `category_id` INT UNSIGNED NOT NULL,
+    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_cf_user_category` (`user_id`,`category_id`),
+    KEY `idx_cf_category` (`category_id`),
+    CONSTRAINT `fk_cf_user`     FOREIGN KEY (`user_id`)     REFERENCES `users`(`id`)      ON DELETE CASCADE,
+    CONSTRAINT `fk_cf_category` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS `failed_logins`;
 CREATE TABLE `failed_logins` (
     `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `email`      VARCHAR(190) NOT NULL,
+    `username`   VARCHAR(190) NOT NULL,
     `ip_address` VARCHAR(45) NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    KEY `idx_fl_email` (`email`),
+    KEY `idx_fl_username` (`username`),
     KEY `idx_fl_ip` (`ip_address`),
     KEY `idx_fl_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

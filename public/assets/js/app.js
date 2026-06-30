@@ -119,10 +119,30 @@
     // Auto-dismiss toasts
     document.querySelectorAll('.toast').forEach(t => setTimeout(() => t.remove(), 4000));
 
+    // Reusable toast helper for client-side messages (validation, AJAX, etc.).
+    // Shows a single transient toast styled like the server-rendered flash ones.
+    const gsToast = (msg, type) => {
+        document.querySelectorAll('.toast.js-toast').forEach(t => t.remove());
+        const t = document.createElement('div');
+        t.className = 'toast js-toast toast-' + (type === 'success' ? 'success' : 'error');
+        t.setAttribute('role', 'alert');
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 5000);
+        return t;
+    };
+    window.gsToast = gsToast;
+
     // Generic accordion cards [data-accordion]
     document.querySelectorAll('[data-accordion]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const body = btn.nextElementSibling;
+            // The panel is the next sibling, but skip any non-panel nodes that
+            // may sit between the header and its body (e.g. the mutual-exclusion
+            // message on Gimmick/Art cards) so the correct body still toggles.
+            let body = btn.nextElementSibling;
+            while (body && body.classList.contains('cat-card-msg')) {
+                body = body.nextElementSibling;
+            }
             if (!body) return;
             const isOpen = body.classList.contains('open');
             body.classList.toggle('open', !isOpen);
@@ -213,6 +233,7 @@
         } else {
             // ---- Mobile: tap a video card to start preview, tap elsewhere to stop
             document.addEventListener('touchstart', (e) => {
+                if (e.target.closest('[data-fav-toggle]')) return; // let the heart handle its own tap
                 const card = e.target.closest('.media-card[data-preview-src]');
                 if (card) {
                     if (!active || active.card !== card) startPreview(card);
@@ -222,4 +243,455 @@
             }, { passive: true });
         }
     })();
+
+    // ---- Favorites ("like") toggle -------------------------------------------
+    // A heart button appears on each media card (overlaying the thumbnail) and
+    // on the media detail page. Clicking it POSTs to /favorites/toggle/{uuid}
+    // and flips the button state without a page reload. On cards the button
+    // lives inside the card's <a>, so we intercept in the capture phase and
+    // stop the click from navigating.
+    (() => {
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
+        const onFavPage = !!document.querySelector('[data-favorites-page]');
+
+        const setState = (btn, favorited) => {
+            btn.classList.toggle('is-fav', favorited);
+            btn.setAttribute('aria-pressed', favorited ? 'true' : 'false');
+            const label = btn.querySelector('.fav-label');
+            if (label) label.textContent = favorited ? 'Favorited' : 'Favorite';
+            const title = favorited ? 'Remove from favorites' : 'Add to favorites';
+            if (!label) { btn.setAttribute('aria-label', title); btn.setAttribute('title', title); }
+        };
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-fav-toggle]');
+            if (!btn) return;
+
+            // Never let the click bubble to the card link / form.
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (btn.dataset.busy === '1') return;
+            const action = btn.dataset.favAction;
+            if (!action) return;
+
+            btn.dataset.busy = '1';
+            fetch(action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(data => {
+                    if (!data || data.ok !== true) return;
+                    setState(btn, data.favorited);
+                    // On the Favorites page, removing a favorite drops the card.
+                    if (onFavPage && data.favorited === false) {
+                        const card = btn.closest('.media-card');
+                        if (card) {
+                            card.style.transition = 'opacity .2s ease';
+                            card.style.opacity = '0';
+                            setTimeout(() => card.remove(), 200);
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Fallback: if the AJAX call fails, submit the surrounding
+                    // form (full page reload) so the action still completes.
+                    const form = btn.closest('form.fav-form');
+                    if (form) form.submit();
+                })
+                .finally(() => { btn.dataset.busy = '0'; });
+        }, true); // capture phase: beat the <a> navigation / form submit
+    })();
+
+    // ---- Follow / unfollow a category ----------------------------------------
+    (() => {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = meta ? meta.getAttribute('content') : '';
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-follow-toggle]');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (btn.dataset.busy === '1') return;
+            const action = btn.dataset.followAction;
+            if (!action) return;
+            btn.dataset.busy = '1';
+            fetch(action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(d => {
+                    if (!d || d.ok !== true) return;
+                    btn.classList.toggle('is-following', d.following);
+                    btn.setAttribute('aria-pressed', d.following ? 'true' : 'false');
+                    const lbl = btn.querySelector('.follow-label');
+                    if (lbl) lbl.textContent = d.following ? 'Following' : 'Follow';
+                    // On the Favorites > Following list, unfollowing drops the card.
+                    if (!d.following && btn.dataset.removable !== undefined) {
+                        const card = btn.closest('.follow-card');
+                        if (card) {
+                            card.style.transition = 'opacity .2s ease';
+                            card.style.opacity = '0';
+                            setTimeout(() => card.remove(), 200);
+                        }
+                    }
+                })
+                .catch(() => {})
+                .finally(() => { btn.dataset.busy = '0'; });
+        }, true);
+    })();
+
+    // ---- Share link generation (media detail) --------------------------------
+    (() => {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = meta ? meta.getAttribute('content') : '';
+
+        document.querySelectorAll('[data-share-form]').forEach((form) => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const box = form.closest('.share-box');
+                const result = box && box.querySelector('[data-share-result]');
+                const linkInput = box && box.querySelector('[data-share-link]');
+                const expiry = box && box.querySelector('[data-share-expiry]');
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn) btn.disabled = true;
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                })
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
+                    .then(d => {
+                        if (!d || d.ok !== true) throw new Error('share failed');
+                        if (linkInput) linkInput.value = d.url;
+                        if (expiry) expiry.textContent = d.expires_human ? 'Expires ' + d.expires_human : '';
+                        if (result) result.hidden = false;
+                        if (linkInput) { linkInput.focus(); linkInput.select(); }
+                    })
+                    .catch(() => { form.submit(); })
+                    .finally(() => { if (btn) btn.disabled = false; });
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('[data-share-copy]');
+            if (!copyBtn) return;
+            const box = copyBtn.closest('.share-box');
+            const input = box && box.querySelector('[data-share-link]');
+            if (!input || !input.value) return;
+            const done = () => {
+                const t = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => { copyBtn.textContent = t; }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(input.value).then(done).catch(() => { input.select(); try { document.execCommand('copy'); } catch (_) {} done(); });
+            } else {
+                input.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                done();
+            }
+        });
+    })();
+
+    // ---- Notification bell ---------------------------------------------------
+    (() => {
+        const bell = document.getElementById('notif-bell');
+        const list = document.getElementById('notif-pop-list');
+        const badge = document.getElementById('notif-badge');
+        if (!bell || !list) return;
+
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrf = meta ? meta.getAttribute('content') : '';
+        const feedUrl = list.dataset.feedUrl;
+        const readAllUrl = list.dataset.readAllUrl;
+        const baseUrl = readAllUrl ? readAllUrl.replace(/\/read-all$/, '') : '';
+
+        const setBadge = (n) => {
+            if (!badge) return;
+            if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.hidden = false; }
+            else { badge.hidden = true; }
+        };
+
+        const render = (data) => {
+            setBadge(data.count || 0);
+            list.innerHTML = '';
+            if (!data.items || !data.items.length) {
+                const p = document.createElement('p');
+                p.className = 'notif-empty muted';
+                p.textContent = 'No notifications yet.';
+                list.appendChild(p);
+                return;
+            }
+            data.items.forEach((it) => {
+                const a = document.createElement('a');
+                a.className = 'notif-pop-item' + (it.is_read ? '' : ' is-unread');
+                a.href = it.url || '#';
+                a.dataset.id = it.id;
+                const t = document.createElement('span'); t.className = 'npi-title'; t.textContent = it.title;
+                a.appendChild(t);
+                if (it.body) { const b = document.createElement('span'); b.className = 'npi-body muted'; b.textContent = it.body; a.appendChild(b); }
+                const ago = document.createElement('span'); ago.className = 'npi-ago muted'; ago.textContent = it.ago || '';
+                a.appendChild(ago);
+                list.appendChild(a);
+            });
+        };
+
+        const loadFeed = () => {
+            fetch(feedUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then(render)
+                .catch(() => {});
+        };
+
+        loadFeed();
+        setInterval(loadFeed, 60000);
+        bell.addEventListener('click', () => loadFeed());
+
+        const markAll = document.getElementById('notif-mark-all');
+        if (markAll) {
+            markAll.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                fetch(readAllUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+                    .then(() => loadFeed())
+                    .catch(() => {});
+            });
+        }
+
+        list.addEventListener('click', (e) => {
+            const item = e.target.closest('.notif-pop-item');
+            if (!item) return;
+            const id = item.dataset.id;
+            const href = item.getAttribute('href');
+            if (id && baseUrl) {
+                fetch(baseUrl + '/' + id + '/read', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' }).catch(() => {});
+            }
+            if (!href || href === '#') e.preventDefault();
+        });
+    })();
+
+    // ---- Global loading states ----------------------------------------------
+    // A thin top progress bar for page transitions + downloads, and an
+    // automatic "loading" state on form submit buttons to prevent double
+    // submission. AJAX flows (favorites/follow/share/notifications) already
+    // set data-busy on their buttons, which the CSS styles as a spinner.
+    (() => {
+        const bar = document.getElementById('global-progress');
+        let active = false;
+        let resetTimer = null;
+
+        const start = () => {
+            if (!bar || active) return;
+            active = true;
+            bar.classList.remove('done');
+            // force reflow so the width transition restarts
+            void bar.offsetWidth;
+            bar.classList.add('active');
+        };
+        const finish = () => {
+            if (!bar) return;
+            active = false;
+            bar.classList.add('done');
+            bar.classList.remove('active');
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => bar.classList.remove('done'), 450);
+        };
+        // Expose so other modules can show progress for their own async work.
+        window.GSLoading = { start, finish };
+
+        // A new page load (including back/forward cache restore) clears the bar.
+        window.addEventListener('pageshow', finish);
+        window.addEventListener('beforeunload', start);
+
+        const isInternalNav = (a) => {
+            if (a.target && a.target !== '_self') return false;
+            if (a.hasAttribute('download') || a.dataset.noProgress !== undefined) return false;
+            const href = a.getAttribute('href') || '';
+            if (!href || href[0] === '#' || /^(javascript|mailto|tel):/i.test(href)) return false;
+            try {
+                const u = new URL(a.href, location.href);
+                if (u.origin !== location.origin) return false;
+                if (u.pathname === location.pathname && u.hash) return false;
+            } catch (_) { return false; }
+            return true;
+        };
+
+        document.addEventListener('click', (e) => {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const a = e.target.closest('a[href]');
+            if (!a) return;
+            const href = a.getAttribute('href') || '';
+            // Downloads don't navigate, so show progress briefly then clear.
+            if (a.hasAttribute('download') || /\/download\//.test(href)) {
+                start();
+                setTimeout(finish, 4000);
+                return;
+            }
+            if (isInternalNav(a)) start();
+        });
+
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (!(form instanceof HTMLFormElement) || e.defaultPrevented) return;
+            // Skip AJAX forms (they handle their own busy state without navigating).
+            if (form.matches('[data-ajax], [data-share-form]') || form.id === 'upload-form') return;
+            start();
+            const btn = form.querySelector('button[type="submit"], button:not([type])');
+            if (btn && !btn.disabled) {
+                btn.classList.add('is-loading');
+                // Disable AFTER the synchronous submit so the button value still posts.
+                setTimeout(() => { btn.disabled = true; }, 0);
+            }
+        }, true);
+    })();
+})();
+
+
+
+/* =====================================================================
+ * Searchable <select> (progressive enhancement)
+ * Any <select data-search> becomes a type-to-filter combo box. The native
+ * <select> stays in the DOM (visually hidden) so form submission and the
+ * existing onchange="this.form.submit()" behaviour keep working unchanged.
+ * Shows all options by default; filters live as the user types.
+ * ===================================================================== */
+(() => {
+    'use strict';
+
+    const initCombo = (select) => {
+        if (select.dataset.comboReady) return;
+        select.dataset.comboReady = '1';
+
+        const placeholder = select.dataset.placeholder || 'Search…';
+        const wrap = document.createElement('div');
+        wrap.className = 'combo';
+        select.parentNode.insertBefore(wrap, select);
+        wrap.appendChild(select);
+        select.classList.add('combo-native');
+        select.setAttribute('tabindex', '-1');
+        select.setAttribute('aria-hidden', 'true');
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'combo-input';
+        input.placeholder = placeholder;
+        input.autocomplete = 'off';
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-expanded', 'false');
+
+        const caret = document.createElement('span');
+        caret.className = 'combo-caret';
+        caret.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
+
+        const panel = document.createElement('div');
+        panel.className = 'combo-panel';
+        panel.hidden = true;
+        const list = document.createElement('ul');
+        list.className = 'combo-list';
+        panel.appendChild(list);
+
+        // Portal the panel to <body> and position it as fixed, so it can never
+        // be clipped by an ancestor's overflow:hidden/auto or trapped beneath
+        // another stacking context (e.g. the Category selection cards).
+        wrap.append(input, caret);
+        document.body.appendChild(panel);
+
+        const positionPanel = () => {
+            const r = input.getBoundingClientRect();
+            panel.style.width = r.width + 'px';
+            panel.style.left = Math.round(r.left) + 'px';
+            const ph = Math.min(panel.scrollHeight, 280);
+            const spaceBelow = window.innerHeight - r.bottom;
+            // Flip above the field if there isn't room below.
+            if (spaceBelow < ph + 8 && r.top > spaceBelow) {
+                panel.style.top = Math.round(r.top - ph - 4) + 'px';
+            } else {
+                panel.style.top = Math.round(r.bottom + 4) + 'px';
+            }
+        };
+
+        const opts = () => [...select.options].map(o => ({ value: o.value, label: o.text }));
+        let activeIdx = -1;
+
+        const syncInput = () => {
+            const sel = select.options[select.selectedIndex];
+            input.value = (sel && sel.value !== '') ? sel.text : '';
+        };
+        syncInput();
+
+        const render = (filter) => {
+            const f = (filter || '').trim().toLowerCase();
+            list.innerHTML = '';
+            activeIdx = -1;
+            const matches = opts().filter(o => !f || o.label.toLowerCase().includes(f));
+            if (!matches.length) {
+                const li = document.createElement('li');
+                li.className = 'combo-empty';
+                li.textContent = 'No matches';
+                list.appendChild(li);
+                return;
+            }
+            matches.forEach((o) => {
+                const li = document.createElement('li');
+                li.className = 'combo-opt' + (o.value === select.value ? ' selected' : '');
+                li.textContent = o.label || '—';
+                li.dataset.value = o.value;
+                li.addEventListener('mousedown', (e) => { e.preventDefault(); choose(o.value); });
+                list.appendChild(li);
+            });
+        };
+
+        const open = () => { render(''); panel.hidden = false; wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true'); positionPanel(); };
+        const close = () => { panel.hidden = true; wrap.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); syncInput(); };
+        const choose = (val) => {
+            if (select.value !== val) {
+                select.value = val;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            syncInput();
+            close();
+        };
+
+        input.addEventListener('focus', () => { input.value = ''; open(); });
+        input.addEventListener('input', () => { panel.hidden = false; wrap.classList.add('open'); render(input.value); positionPanel(); });
+        caret.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (panel.hidden) input.focus();
+            else close();
+        });
+        input.addEventListener('keydown', (e) => {
+            const items = [...list.querySelectorAll('.combo-opt')];
+            if (e.key === 'ArrowDown') {
+                e.preventDefault(); activeIdx = Math.min(items.length - 1, activeIdx + 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault(); activeIdx = Math.max(0, activeIdx - 1);
+            } else if (e.key === 'Enter') {
+                if (!panel.hidden && items[activeIdx]) { e.preventDefault(); choose(items[activeIdx].dataset.value); }
+                return;
+            } else if (e.key === 'Escape') {
+                close(); return;
+            } else {
+                return;
+            }
+            items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+            items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+        });
+        document.addEventListener('click', (e) => { if (!wrap.contains(e.target) && !panel.contains(e.target)) close(); });
+        // Keep the portalled panel glued to the field while open.
+        window.addEventListener('scroll', () => { if (!panel.hidden) positionPanel(); }, true);
+        window.addEventListener('resize', () => { if (!panel.hidden) positionPanel(); });
+    };
+
+    document.querySelectorAll('select[data-search]').forEach(initCombo);
 })();

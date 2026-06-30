@@ -97,7 +97,7 @@ $buildUrl = function (array $changes = []) use ($filters, $sort): string {
 
                 <label class="select">
                     <span>Company</span>
-                    <select name="company" onchange="this.form.submit()">
+                    <select name="company" onchange="this.form.submit()" data-search data-placeholder="Search company…">
                         <option value="">All companies</option>
                         <?php foreach ($companies as $co): ?>
                         <option value="<?= (int)$co['id'] ?>" <?= ((int)($filters['company_id'] ?? 0)) === (int)$co['id'] ? 'selected' : '' ?>><?= e($co['name']) ?></option>
