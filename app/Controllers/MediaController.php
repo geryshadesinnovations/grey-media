@@ -332,12 +332,32 @@ final class MediaController
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime  = $finfo ? (finfo_file($finfo, $path) ?: '') : '';
         if ($finfo) finfo_close($finfo);
+        $mime = strtolower(trim($mime));
 
         $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
         if ($ext === 'pptx' && in_array($mime, ['application/zip', 'application/x-zip-compressed'], true)) {
             return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
         }
-        if ($ext === 'ppt' && $mime === 'application/octet-stream') return 'application/vnd.ms-powerpoint';
+
+        // Trusted extension fallback when finfo returns a generic type (e.g. a
+        // valid .mp4 reported as application/octet-stream). Keeps a genuine file
+        // from being rejected while never overriding a concrete mismatch.
+        $byExt = [
+            'mp4'  => 'video/mp4',  'm4v'  => 'video/mp4',
+            'png'  => 'image/png',  'jpg'  => 'image/jpeg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp', 'gif'  => 'image/gif',
+            'pdf'  => 'application/pdf',
+            'ppt'  => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        ];
+        $generic = ['', 'application/octet-stream', 'application/x-empty', 'binary'];
+        if (isset($byExt[$ext])) {
+            $isVideoExt = in_array($ext, ['mp4', 'm4v'], true);
+            if (in_array($mime, $generic, true) || ($isVideoExt && str_starts_with($mime, 'video/'))) {
+                return $byExt[$ext];
+            }
+        }
+
         return $mime ?: 'application/octet-stream';
     }
 
